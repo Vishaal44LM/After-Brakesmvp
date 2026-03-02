@@ -1,17 +1,20 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Phone, ArrowRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const navigate = useNavigate();
   const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
+  const [otp, setOtp] = useState(["", "", "", ""]);
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [loading, setLoading] = useState(false);
+  const [demoOtp, setDemoOtp] = useState<string | null>(null);
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const handleSendOTP = async () => {
     if (phone.length !== 10) {
@@ -19,26 +22,81 @@ const Login = () => {
       return;
     }
     setLoading(true);
-    // TODO: Integrate with backend OTP service
-    setTimeout(() => {
+    try {
+      const { data, error } = await supabase.functions.invoke("send-otp", {
+        body: { phone },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      
+      setDemoOtp(data.demo_otp);
       setStep("otp");
+      toast.success(`OTP sent! Demo OTP: ${data.demo_otp}`);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to send OTP");
+    } finally {
       setLoading(false);
-      toast.success("OTP sent successfully!");
-    }, 1000);
+    }
+  };
+
+  const handleOtpChange = (index: number, value: string) => {
+    const val = value.replace(/\D/g, "").slice(0, 1);
+    const newOtp = [...otp];
+    newOtp[index] = val;
+    setOtp(newOtp);
+
+    if (val && index < 3) {
+      otpRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
   };
 
   const handleVerifyOTP = async () => {
-    if (otp.length !== 4) {
+    const code = otp.join("");
+    if (code.length !== 4) {
       toast.error("Enter a valid 4-digit OTP");
       return;
     }
     setLoading(true);
-    // TODO: Verify OTP and check user in database
-    setTimeout(() => {
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-otp", {
+        body: { phone, code },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      // Set session from the edge function response
+      if (data.session) {
+        await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+      }
+
+      // Route based on user state
+      if (data.isNewUser || !data.role) {
+        navigate("/role-select");
+      } else if (data.role === "user" && data.hasProfile) {
+        navigate("/dashboard");
+      } else if (data.role === "mechanic" && data.hasMechanicProfile) {
+        navigate("/mechanic-dashboard");
+      } else if (data.role === "user") {
+        navigate("/setup/user");
+      } else if (data.role === "mechanic") {
+        navigate("/setup/mechanic");
+      } else {
+        navigate("/role-select");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Invalid OTP");
+    } finally {
       setLoading(false);
-      // Simulating new user → go to role selection
-      navigate("/role-select");
-    }, 1000);
+    }
   };
 
   return (
@@ -66,6 +124,7 @@ const Login = () => {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
                   className="bg-secondary border-0 text-foreground placeholder:text-muted-foreground"
+                  onKeyDown={(e) => e.key === "Enter" && phone.length === 10 && handleSendOTP()}
                 />
               </div>
               <Button
@@ -82,37 +141,36 @@ const Login = () => {
               <label className="text-sm font-medium text-muted-foreground mb-2 block">
                 Enter OTP sent to +91 {phone}
               </label>
-              <div className="flex gap-2 justify-center mb-4">
+              {demoOtp && (
+                <p className="text-xs text-primary mb-3 text-center">Demo OTP: <strong>{demoOtp}</strong></p>
+              )}
+              <div className="flex gap-3 justify-center mb-4">
                 {[0, 1, 2, 3].map((i) => (
                   <Input
                     key={i}
+                    ref={(el) => { otpRefs.current[i] = el; }}
                     type="text"
+                    inputMode="numeric"
                     maxLength={1}
-                    value={otp[i] || ""}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/\D/g, "");
-                      const newOtp = otp.split("");
-                      newOtp[i] = val;
-                      setOtp(newOtp.join(""));
-                      if (val && e.target.nextElementSibling) {
-                        (e.target.nextElementSibling as HTMLInputElement)?.focus();
-                      }
-                    }}
+                    value={otp[i]}
+                    onChange={(e) => handleOtpChange(i, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
                     className="w-12 h-12 text-center text-lg bg-secondary border-0 text-foreground"
+                    autoFocus={i === 0}
                   />
                 ))}
               </div>
               <Button
                 className="w-full"
                 onClick={handleVerifyOTP}
-                disabled={loading || otp.length !== 4}
+                disabled={loading || otp.join("").length !== 4}
               >
                 {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ArrowRight className="h-4 w-4 mr-2" />}
                 Verify OTP
               </Button>
               <button
                 className="w-full text-center text-sm text-muted-foreground mt-3 hover:text-primary transition-colors"
-                onClick={() => { setStep("phone"); setOtp(""); }}
+                onClick={() => { setStep("phone"); setOtp(["", "", "", ""]); setDemoOtp(null); }}
               >
                 Change phone number
               </button>
