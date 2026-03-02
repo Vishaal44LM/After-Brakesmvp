@@ -14,16 +14,329 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      issues: {
+        Row: {
+          ai_analysis: Json | null
+          area: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          pincode: string | null
+          status: string
+          updated_at: string | null
+          user_id: string
+          vehicle_id: string | null
+        }
+        Insert: {
+          ai_analysis?: Json | null
+          area?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          pincode?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+          vehicle_id?: string | null
+        }
+        Update: {
+          ai_analysis?: Json | null
+          area?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          pincode?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "issues_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mechanic_profiles: {
+        Row: {
+          area: string
+          created_at: string | null
+          garage_name: string
+          garage_photo_url: string | null
+          id: string
+          name: string
+          pincode: string
+          rating: number | null
+          total_ratings: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          area: string
+          created_at?: string | null
+          garage_name: string
+          garage_photo_url?: string | null
+          id?: string
+          name: string
+          pincode: string
+          rating?: number | null
+          total_ratings?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          area?: string
+          created_at?: string | null
+          garage_name?: string
+          garage_photo_url?: string | null
+          id?: string
+          name?: string
+          pincode?: string
+          rating?: number | null
+          total_ratings?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      mechanic_responses: {
+        Row: {
+          availability: string | null
+          created_at: string | null
+          id: string
+          issue_id: string
+          mechanic_id: string
+          message: string | null
+          price_quote: number
+          status: string
+        }
+        Insert: {
+          availability?: string | null
+          created_at?: string | null
+          id?: string
+          issue_id: string
+          mechanic_id: string
+          message?: string | null
+          price_quote: number
+          status?: string
+        }
+        Update: {
+          availability?: string | null
+          created_at?: string | null
+          id?: string
+          issue_id?: string
+          mechanic_id?: string
+          message?: string | null
+          price_quote?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mechanic_responses_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          issue_id: string
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          issue_id: string
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          issue_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      otp_codes: {
+        Row: {
+          code: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          phone: string
+          verified: boolean | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          phone: string
+          verified?: boolean | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          phone?: string
+          verified?: boolean | null
+        }
+        Relationships: []
+      }
+      phone_share_consents: {
+        Row: {
+          created_at: string | null
+          granted: boolean | null
+          id: string
+          issue_id: string
+          mechanic_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          granted?: boolean | null
+          id?: string
+          issue_id: string
+          mechanic_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          granted?: boolean | null
+          id?: string
+          issue_id?: string
+          mechanic_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phone_share_consents_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          area: string | null
+          created_at: string | null
+          id: string
+          name: string | null
+          phone: string
+          pincode: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          area?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string | null
+          phone: string
+          pincode?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          area?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string | null
+          phone?: string
+          pincode?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      vehicles: {
+        Row: {
+          created_at: string | null
+          id: string
+          user_id: string
+          vehicle_brand: string | null
+          vehicle_model: string | null
+          vehicle_type: string
+          vehicle_year: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          user_id: string
+          vehicle_brand?: string | null
+          vehicle_model?: string | null
+          vehicle_type: string
+          vehicle_year?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          user_id?: string
+          vehicle_brand?: string | null
+          vehicle_model?: string | null
+          vehicle_type?: string
+          vehicle_year?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "user" | "mechanic"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +463,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["user", "mechanic"],
+    },
   },
 } as const
