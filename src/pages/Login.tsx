@@ -66,7 +66,11 @@ const Login = () => {
           navigate("/dashboard");
         }
       } else if (data.role === "mechanic") {
-        navigate("/mechanic-dashboard");
+        if (!data.profileComplete) {
+          navigate("/setup/mechanic");
+        } else {
+          navigate("/mechanic-dashboard");
+        }
       }
     } catch (e: any) {
       toast.error(e.message || "OTP verification failed");

@@ -47,23 +47,15 @@ serve(async (req) => {
     const email = `${phone}@afterbrakes.app`;
     const password = `AB_otp_${phone}_secure_key`;
 
-    // Check if user exists by listing users with this email
-    const { data: listData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1 });
-    let existingUser = null;
-
-    // Search by email
-    const { data: usersSearch } = await supabase
+    // Check if user exists by searching profiles
+    const { data: existingProfile } = await supabase
       .from("profiles")
       .select("user_id")
       .eq("phone", phone)
       .limit(1)
       .single();
 
-    if (usersSearch) {
-      existingUser = usersSearch;
-    }
-
-    if (!existingUser) {
+    if (!existingProfile) {
       // Create new user
       const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
         email,
@@ -84,11 +76,21 @@ serve(async (req) => {
       });
     }
 
+    // User exists - update their password to ensure it matches
+    const { error: updateError } = await supabase.auth.admin.updateUserById(
+      existingProfile.user_id,
+      { password, email_confirm: true }
+    );
+    if (updateError) {
+      console.error("Failed to update user password:", updateError);
+      throw updateError;
+    }
+
     // Check if user has role
     const { data: roles } = await supabase
       .from("user_roles")
       .select("role")
-      .eq("user_id", existingUser.user_id);
+      .eq("user_id", existingProfile.user_id);
 
     const role = roles && roles.length > 0 ? roles[0].role : null;
 
@@ -96,10 +98,20 @@ serve(async (req) => {
     const { data: profile } = await supabase
       .from("profiles")
       .select("name")
-      .eq("user_id", existingUser.user_id)
+      .eq("user_id", existingProfile.user_id)
       .single();
 
-    const profileComplete = profile?.name ? true : false;
+    let profileComplete = profile?.name ? true : false;
+
+    // For mechanics, also check mechanic_profiles
+    if (role === "mechanic") {
+      const { data: mechProfile } = await supabase
+        .from("mechanic_profiles")
+        .select("id")
+        .eq("user_id", existingProfile.user_id)
+        .single();
+      if (!mechProfile) profileComplete = false;
+    }
 
     return new Response(JSON.stringify({ success: true, isNew: false, email, role, profileComplete }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

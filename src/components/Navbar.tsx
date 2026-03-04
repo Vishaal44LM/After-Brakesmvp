@@ -37,15 +37,7 @@ const Navbar = ({ role, onLogout }: NavbarProps) => {
                 <Home className="h-4 w-4 mr-1" />
                 <span className="hidden sm:inline">Dashboard</span>
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate("/profile")}
-                className={location.pathname === "/profile" ? "text-primary" : "text-muted-foreground"}
-              >
-                {role === "user" ? <User className="h-4 w-4 mr-1" /> : <Wrench className="h-4 w-4 mr-1" />}
-                <span className="hidden sm:inline">Profile</span>
-              </Button>
+              {/* Profile is handled via dashboard tabs - no separate route */}
             </>
           )}
           {onLogout && (
