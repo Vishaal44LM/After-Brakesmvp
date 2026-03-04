@@ -1,13 +1,13 @@
 import { useState, useCallback } from "react";
 import Preloader from "@/components/Preloader";
-import Login from "@/pages/Login";
+import RoleSelect from "@/pages/RoleSelect";
 
 const Index = () => {
   const [loaded, setLoaded] = useState(false);
   const handleComplete = useCallback(() => setLoaded(true), []);
 
   if (!loaded) return <Preloader onComplete={handleComplete} />;
-  return <Login />;
+  return <RoleSelect />;
 };
 
 export default Index;

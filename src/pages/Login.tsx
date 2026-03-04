@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Phone, ArrowRight, Loader2 } from "lucide-react";
+import { Phone, ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -11,9 +11,10 @@ const Login = () => {
   const navigate = useNavigate();
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
-  const [sentOtp, setSentOtp] = useState("");
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [loading, setLoading] = useState(false);
+
+  const selectedRole = localStorage.getItem("afterbrakes_selected_role") as "user" | "mechanic" | null;
 
   const handleSendOTP = async () => {
     if (phone.length !== 10) {
@@ -27,7 +28,6 @@ const Login = () => {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      setSentOtp(data.otp); // Demo: show OTP
       setStep("otp");
       toast.success(`OTP sent! (Demo: ${data.otp})`);
     } catch (e: any) {
@@ -50,15 +50,25 @@ const Login = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      // Sign in with the email/password created by verify-otp
+      // Sign in
       const email = data.email;
       const password = `AB_otp_${phone}_secure_key`;
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) throw signInError;
 
-      // Navigate based on user state
+      // Determine navigation
       if (data.isNew || !data.role) {
-        navigate("/role-select");
+        // New user - assign the role they selected before login
+        const role = selectedRole || "user";
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) {
+          await supabase.from("user_roles").insert({ user_id: currentUser.id, role });
+        }
+        if (role === "user") {
+          navigate("/setup/user");
+        } else {
+          navigate("/setup/mechanic");
+        }
       } else if (data.role === "user") {
         if (!data.profileComplete) {
           navigate("/setup/user");
@@ -145,6 +155,10 @@ const Login = () => {
             </>
           )}
         </div>
+
+        <button onClick={() => navigate("/")} className="mt-8 flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
+          <ArrowLeft className="h-4 w-4" /> Back to Role Selection
+        </button>
       </div>
     </div>
   );

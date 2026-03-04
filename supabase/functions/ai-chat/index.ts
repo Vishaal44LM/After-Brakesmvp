@@ -25,9 +25,9 @@ Guidelines:
 - Be helpful, concise, and knowledgeable about vehicle maintenance
 - Suggest common causes and solutions for vehicle problems
 - Recommend visiting a mechanic for serious issues
-- Provide estimated price ranges in INR when relevant
 - Reference Chennai-specific conditions (heat, monsoon, road quality) when relevant
-- Keep responses under 200 words`;
+- Keep responses under 200 words
+- Do NOT mention or estimate prices`;
 
     const allMessages = [
       { role: "system", content: systemPrompt },

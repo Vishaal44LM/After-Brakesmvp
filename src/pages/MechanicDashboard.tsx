@@ -19,24 +19,20 @@ const MechanicDashboard = () => {
   const navigate = useNavigate();
   const { user, mechanicProfile, signOut, refreshProfile } = useAuth();
 
-  // Issues state
   const [nearbyIssues, setNearbyIssues] = useState<any[]>([]);
-  const [loadingIssues, setLoadingIssues] = useState(true);
+  const [loadingIssues, setLoadingIssues] = useState(false);
   const [respondingTo, setRespondingTo] = useState<string | null>(null);
   const [quote, setQuote] = useState("");
   const [message, setMessage] = useState("");
   const [availability, setAvailability] = useState("");
   const [submittingResponse, setSubmittingResponse] = useState(false);
 
-  // My Responses
   const [myResponses, setMyResponses] = useState<any[]>([]);
   const [loadingMyResponses, setLoadingMyResponses] = useState(false);
 
-  // Phone consents
   const [phoneConsents, setPhoneConsents] = useState<any[]>([]);
   const [userPhones, setUserPhones] = useState<Record<string, string>>({});
 
-  // Profile edit
   const [editName, setEditName] = useState(mechanicProfile?.name || "");
   const [editGarageName, setEditGarageName] = useState(mechanicProfile?.garage_name || "");
   const [editArea, setEditArea] = useState(mechanicProfile?.area || "");
@@ -56,7 +52,7 @@ const MechanicDashboard = () => {
   }, [mechanicProfile]);
 
   useEffect(() => {
-    if (user && mechanicProfile) {
+    if (user) {
       fetchNearbyIssues();
       fetchMyResponses();
       fetchPhoneConsents();
@@ -64,6 +60,7 @@ const MechanicDashboard = () => {
   }, [user, mechanicProfile]);
 
   const fetchNearbyIssues = async () => {
+    if (!user) return;
     setLoadingIssues(true);
     try {
       let query = supabase
@@ -72,13 +69,19 @@ const MechanicDashboard = () => {
         .eq("status", "open")
         .order("created_at", { ascending: false });
 
+      // Filter by mechanic's pincode if available
       if (mechanicProfile?.pincode) {
         query = query.eq("pincode", mechanicProfile.pincode);
       }
 
-      const { data } = await query;
+      const { data, error } = await query;
+      if (error) {
+        console.error("Fetch issues error:", error);
+        setNearbyIssues([]);
+        setLoadingIssues(false);
+        return;
+      }
 
-      // Enrich with vehicle info
       if (data && data.length > 0) {
         const vehicleIds = data.filter((i: any) => i.vehicle_id).map((i: any) => i.vehicle_id);
         let vehicleMap: Record<string, any> = {};
@@ -91,7 +94,8 @@ const MechanicDashboard = () => {
         setNearbyIssues([]);
       }
     } catch (e: any) {
-      console.error(e);
+      console.error("fetchNearbyIssues error:", e);
+      setNearbyIssues([]);
     } finally {
       setLoadingIssues(false);
     }
@@ -125,7 +129,6 @@ const MechanicDashboard = () => {
       .eq("granted", true);
     setPhoneConsents(data || []);
 
-    // Fetch phone numbers for consented users
     if (data && data.length > 0) {
       const userIds = [...new Set(data.map((c: any) => c.user_id))];
       const { data: profiles } = await supabase.from("profiles").select("user_id, phone").in("user_id", userIds);
@@ -207,16 +210,11 @@ const MechanicDashboard = () => {
 
   const handleLogout = async () => {
     await signOut();
-    navigate("/login");
+    navigate("/");
   };
 
-  const getUserPhone = (issueUserId: string) => {
-    return userPhones[issueUserId] || null;
-  };
-
-  const hasPhoneConsent = (issueId: string) => {
-    return phoneConsents.some((c: any) => c.issue_id === issueId);
-  };
+  const getUserPhone = (issueUserId: string) => userPhones[issueUserId] || null;
+  const hasPhoneConsent = (issueId: string) => phoneConsents.some((c: any) => c.issue_id === issueId);
 
   return (
     <div className="min-h-screen bg-background">
@@ -255,9 +253,6 @@ const MechanicDashboard = () => {
                       </span>
                     </div>
                   </div>
-                  {issue.ai_analysis?.estimated_price_range && (
-                    <span className="text-xs bg-secondary px-2 py-1 rounded text-muted-foreground">{(issue.ai_analysis as any).estimated_price_range}</span>
-                  )}
                 </div>
                 <p className="text-sm text-foreground mb-2">{issue.description}</p>
                 {issue.image_url && (
@@ -270,7 +265,6 @@ const MechanicDashboard = () => {
                   </div>
                 )}
 
-                {/* Phone number display */}
                 {hasPhoneConsent(issue.id) && getUserPhone(issue.user_id) && (
                   <div className="flex items-center gap-2 mb-3 bg-success/10 rounded-lg p-2">
                     <Phone className="h-4 w-4 text-success" />
@@ -367,7 +361,6 @@ const MechanicDashboard = () => {
                 <div><label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1"><Hash className="h-3 w-3" /> Pincode</label>
                   <Input value={editPincode} onChange={(e) => setEditPincode(e.target.value.replace(/\D/g, ""))} maxLength={6} className="bg-secondary border-0" /></div>
 
-                {/* Rating display */}
                 <div className="bg-secondary rounded-lg p-3">
                   <div className="flex items-center gap-2">
                     <Star className="h-4 w-4 text-warning" />
