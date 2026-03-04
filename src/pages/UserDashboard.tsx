@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Camera, Upload, Sparkles, Star, MapPin, MessageCircle, Clock, IndianRupee,
-  Loader2, Send, Bot, User, Check, Phone, Car, History, Edit2, Plus, Trash2, Save, Hash
+  Loader2, Send, Bot, User, Check, Phone, Car, Edit2, Plus, Trash2, Save, Hash
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,7 +45,6 @@ const UserDashboard = () => {
 
   // Profile State
   const [vehicles, setVehicles] = useState<any[]>([]);
-  const [pastIssues, setPastIssues] = useState<any[]>([]);
   const [editName, setEditName] = useState(profile?.name || "");
   const [editArea, setEditArea] = useState(profile?.area || "");
   const [editPincode, setEditPincode] = useState(profile?.pincode || "");
@@ -83,9 +82,7 @@ const UserDashboard = () => {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
     setIssues(issuesData || []);
-    setPastIssues(issuesData || []);
 
-    // Fetch responses for all issues
     if (issuesData && issuesData.length > 0) {
       const issueIds = issuesData.map((i: any) => i.id);
       const { data: respData } = await supabase
@@ -93,7 +90,6 @@ const UserDashboard = () => {
         .select("*")
         .in("issue_id", issueIds);
 
-      // Fetch mechanic profiles for responses
       if (respData && respData.length > 0) {
         const mechIds = [...new Set(respData.map((r: any) => r.mechanic_id))];
         const { data: mechProfiles } = await supabase
@@ -112,7 +108,6 @@ const UserDashboard = () => {
     setLoadingResponses(false);
   };
 
-  // Image upload
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -123,7 +118,6 @@ const UserDashboard = () => {
     }
   };
 
-  // Analyze + Submit Issue
   const handleSubmitIssue = async () => {
     if (!issueText.trim() && !imageFile) {
       toast.error("Describe your issue or upload an image");
@@ -132,8 +126,8 @@ const UserDashboard = () => {
     if (!user) return;
 
     setSubmitting(true);
+    setAnalysis(null);
     try {
-      // Upload image if exists
       let imageUrl: string | null = null;
       let imageBase64: string | null = null;
 
@@ -147,52 +141,48 @@ const UserDashboard = () => {
         imageBase64 = imagePreview;
       }
 
-      // Get vehicle info
       const vehicle = vehicles.find((v: any) => v.id === selectedVehicle);
       const vehicleInfo = vehicle ? `${vehicle.vehicle_type} ${vehicle.vehicle_brand || ""} ${vehicle.vehicle_model || ""} ${vehicle.vehicle_year || ""}`.trim() : "";
 
-      // AI Analysis
-      setAnalyzing(true);
-      const { data: aiData, error: aiError } = await supabase.functions.invoke("analyze-issue", {
-        body: { description: issueText, imageBase64, vehicleInfo },
-      });
-
-      let aiAnalysis = null;
-      if (!aiError && aiData?.analysis) {
-        if (!aiData.analysis.is_valid_vehicle_image && imageFile) {
-          toast.error(aiData.analysis.image_rejection_reason || "Please upload a valid vehicle image");
-          setAnalyzing(false);
-          setSubmitting(false);
-          return;
-        }
-        aiAnalysis = aiData.analysis;
-        setAnalysis(aiAnalysis);
-      }
-      setAnalyzing(false);
-
-      // Save issue to database
-      const { error: issueError } = await supabase.from("issues").insert({
+      // Save issue to database first
+      const { data: insertedIssue, error: issueError } = await supabase.from("issues").insert({
         user_id: user.id,
         description: issueText,
         image_url: imageUrl,
         vehicle_id: selectedVehicle || null,
         area: profile?.area || null,
         pincode: profile?.pincode || null,
-        ai_analysis: aiAnalysis,
         status: "open",
-      });
+      }).select().single();
       if (issueError) throw issueError;
 
-      toast.success("Issue submitted! Mechanics in your area will be notified.");
+      toast.success("Issue submitted! Running AI analysis...");
       setIssueText("");
       setImageFile(null);
       setImagePreview(null);
       setSelectedVehicle("");
+      setSubmitting(false);
+
+      // AI Analysis (runs after submit)
+      setAnalyzing(true);
+      const { data: aiData, error: aiError } = await supabase.functions.invoke("analyze-issue", {
+        body: { description: issueText, imageBase64, vehicleInfo },
+      });
+
+      if (!aiError && aiData?.analysis) {
+        if (!aiData.analysis.is_valid_vehicle_image && imageFile) {
+          toast.error(aiData.analysis.image_rejection_reason || "Please upload a valid vehicle image");
+        } else {
+          setAnalysis(aiData.analysis);
+          // Update issue with AI analysis
+          await supabase.from("issues").update({ ai_analysis: aiData.analysis }).eq("id", insertedIssue.id);
+        }
+      }
+      setAnalyzing(false);
       fetchIssues();
     } catch (e: any) {
       toast.error(e.message || "Failed to submit issue");
       setAnalyzing(false);
-    } finally {
       setSubmitting(false);
     }
   };
@@ -272,11 +262,9 @@ const UserDashboard = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
-  // Accept mechanic response
   const handleAcceptResponse = async (responseId: string, mechanicId: string, issueId: string) => {
     try {
       await supabase.from("mechanic_responses").update({ status: "accepted" }).eq("id", responseId);
-      // Grant phone share consent
       await supabase.from("phone_share_consents").insert({
         user_id: user!.id,
         mechanic_id: mechanicId,
@@ -290,7 +278,6 @@ const UserDashboard = () => {
     }
   };
 
-  // Profile save
   const handleSaveProfile = async () => {
     if (!editName.trim()) { toast.error("Name required"); return; }
     if (!editArea) { toast.error("Area required"); return; }
@@ -338,7 +325,7 @@ const UserDashboard = () => {
 
   const handleLogout = async () => {
     await signOut();
-    navigate("/login");
+    navigate("/");
   };
 
   return (
@@ -401,6 +388,15 @@ const UserDashboard = () => {
               </Button>
             </section>
 
+            {analyzing && (
+              <section className="bg-card rounded-xl border border-border p-5 animate-slide-up">
+                <div className="flex items-center gap-2 text-primary">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span className="text-sm font-medium">AI is analyzing your issue...</span>
+                </div>
+              </section>
+            )}
+
             {analysis && (
               <section className="bg-card rounded-xl border border-primary/30 p-5 animate-slide-up glow-primary">
                 <h2 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
@@ -414,7 +410,6 @@ const UserDashboard = () => {
                       <p className={`text-sm font-medium ${analysis.severity === "High" ? "text-destructive" : analysis.severity === "Medium" ? "text-warning" : "text-success"}`}>{analysis.severity}</p>
                     </div>
                   </div>
-                  <div className="bg-secondary rounded-lg p-3"><p className="text-xs text-muted-foreground">Est. Price</p><p className="text-sm font-medium text-foreground">{analysis.estimated_price_range}</p></div>
                   <div className="bg-secondary rounded-lg p-3"><p className="text-xs text-muted-foreground">Recommendation</p><p className="text-sm text-foreground">{analysis.recommendation}</p></div>
                 </div>
               </section>
@@ -564,24 +559,6 @@ const UserDashboard = () => {
                   {addingVehicle ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Plus className="h-3 w-3 mr-1" />} Add Vehicle
                 </Button>
               </div>
-            </section>
-
-            {/* Past Issues */}
-            <section className="bg-card rounded-xl border border-border p-5 animate-slide-up">
-              <h2 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2"><History className="h-5 w-5 text-primary" /> Past Issues</h2>
-              {pastIssues.length === 0 && <p className="text-sm text-muted-foreground">No past issues yet.</p>}
-              {pastIssues.map((issue: any) => (
-                <div key={issue.id} className="bg-secondary rounded-lg p-3 mb-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-foreground">{issue.description?.slice(0, 80)}{issue.description?.length > 80 ? "..." : ""}</p>
-                    <span className={`text-xs px-2 py-0.5 rounded ${issue.status === "open" ? "bg-primary/20 text-primary" : "bg-success/20 text-success"}`}>{issue.status}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">{new Date(issue.created_at).toLocaleDateString()}</p>
-                  {issue.ai_analysis && (
-                    <p className="text-xs text-primary mt-1">AI: {(issue.ai_analysis as any).issue}</p>
-                  )}
-                </div>
-              ))}
             </section>
           </TabsContent>
         </Tabs>

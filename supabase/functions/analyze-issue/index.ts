@@ -77,16 +77,12 @@ Always provide your analysis using the analyze_vehicle_issue function.`
                   type: "string",
                   enum: ["Low", "Medium", "High"],
                 },
-                estimated_price_range: {
-                  type: "string",
-                  description: "Estimated repair price range in INR, e.g. ₹800 - ₹1500",
-                },
                 recommendation: {
                   type: "string",
                   description: "Brief recommendation for the user",
                 },
               },
-              required: ["is_valid_vehicle_image", "issue", "affected_part", "severity", "estimated_price_range", "recommendation"],
+              required: ["is_valid_vehicle_image", "issue", "affected_part", "severity", "recommendation"],
               additionalProperties: false,
             },
           },
