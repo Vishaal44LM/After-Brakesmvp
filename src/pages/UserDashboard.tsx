@@ -278,6 +278,17 @@ const UserDashboard = () => {
     }
   };
 
+  const handleRateResponse = async (responseId: string, rating: number) => {
+    try {
+      const { error } = await supabase.from("mechanic_responses").update({ user_rating: rating } as any).eq("id", responseId);
+      if (error) throw error;
+      toast.success("Rating submitted!");
+      fetchIssues();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to rate");
+    }
+  };
+
   const handleSaveProfile = async () => {
     if (!editName.trim()) { toast.error("Name required"); return; }
     if (!editArea) { toast.error("Area required"); return; }
@@ -501,6 +512,17 @@ const UserDashboard = () => {
                     <MessageCircle className="h-3 w-3 mr-1" /> Chat
                   </Button>
                 </div>
+                {r.status === "accepted" && (
+                  <div className="flex items-center gap-1 mt-3 pt-3 border-t border-border">
+                    <span className="text-xs text-muted-foreground mr-1">Rate Mechanic:</span>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button key={star} onClick={() => handleRateResponse(r.id, star)} className="transition-transform hover:scale-125">
+                        <Star className={`h-5 w-5 ${(r.user_rating || 0) >= star ? "text-warning fill-warning" : "text-muted-foreground"}`} />
+                      </button>
+                    ))}
+                    {r.user_rating && <span className="text-xs text-muted-foreground ml-2">({r.user_rating}/5)</span>}
+                  </div>
+                )}
               </div>
             ))}
           </TabsContent>

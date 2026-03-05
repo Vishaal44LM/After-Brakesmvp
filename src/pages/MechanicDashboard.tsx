@@ -7,8 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Car, Sparkles, MapPin, AlertTriangle, IndianRupee, MessageCircle, Send, Loader2,
-  Clock, Star, Edit2, Save, Camera, Store, Hash, User, Phone
+  Car, MapPin, AlertTriangle, IndianRupee, MessageCircle, Send, Loader2,
+  Clock, Star, Edit2, Save, Camera, Store, Hash, User, Phone, Search
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,8 +27,13 @@ const MechanicDashboard = () => {
   const [availability, setAvailability] = useState("");
   const [submittingResponse, setSubmittingResponse] = useState(false);
 
+  // Search state
+  const [searchArea, setSearchArea] = useState("");
+  const [searchPincode, setSearchPincode] = useState("");
+
   const [myResponses, setMyResponses] = useState<any[]>([]);
   const [loadingMyResponses, setLoadingMyResponses] = useState(false);
+  const [respondedIssueIds, setRespondedIssueIds] = useState<Set<string>>(new Set());
 
   const [phoneConsents, setPhoneConsents] = useState<any[]>([]);
   const [userPhones, setUserPhones] = useState<Record<string, string>>({});
@@ -59,7 +64,7 @@ const MechanicDashboard = () => {
     }
   }, [user, mechanicProfile]);
 
-  const fetchNearbyIssues = async () => {
+  const fetchNearbyIssues = async (overrideArea?: string, overridePincode?: string) => {
     if (!user) return;
     setLoadingIssues(true);
     try {
@@ -69,9 +74,14 @@ const MechanicDashboard = () => {
         .eq("status", "open")
         .order("created_at", { ascending: false });
 
-      // Filter by mechanic's pincode if available
-      if (mechanicProfile?.pincode) {
-        query = query.eq("pincode", mechanicProfile.pincode);
+      const filterPincode = overridePincode || searchPincode || mechanicProfile?.pincode;
+      const filterArea = overrideArea || searchArea;
+
+      if (filterPincode) {
+        query = query.eq("pincode", filterPincode);
+      }
+      if (filterArea) {
+        query = query.eq("area", filterArea);
       }
 
       const { data, error } = await query;
@@ -101,6 +111,16 @@ const MechanicDashboard = () => {
     }
   };
 
+  const handleSearch = () => {
+    fetchNearbyIssues(searchArea, searchPincode);
+  };
+
+  const handleResetSearch = () => {
+    setSearchArea("");
+    setSearchPincode("");
+    fetchNearbyIssues("", "");
+  };
+
   const fetchMyResponses = async () => {
     if (!user) return;
     setLoadingMyResponses(true);
@@ -112,10 +132,12 @@ const MechanicDashboard = () => {
 
     if (data && data.length > 0) {
       const issueIds = data.map((r: any) => r.issue_id);
+      setRespondedIssueIds(new Set(issueIds));
       const { data: issuesData } = await supabase.from("issues").select("*").in("id", issueIds);
       setMyResponses(data.map((r: any) => ({ ...r, issue: issuesData?.find((i: any) => i.id === r.issue_id) })));
     } else {
       setMyResponses([]);
+      setRespondedIssueIds(new Set());
     }
     setLoadingMyResponses(false);
   };
@@ -157,6 +179,7 @@ const MechanicDashboard = () => {
       setMessage("");
       setAvailability("");
       fetchMyResponses();
+      fetchNearbyIssues();
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -215,6 +238,7 @@ const MechanicDashboard = () => {
 
   const getUserPhone = (issueUserId: string) => userPhones[issueUserId] || null;
   const hasPhoneConsent = (issueId: string) => phoneConsents.some((c: any) => c.issue_id === issueId);
+  const hasResponded = (issueId: string) => respondedIssueIds.has(issueId);
 
   return (
     <div className="min-h-screen bg-background">
@@ -233,9 +257,45 @@ const MechanicDashboard = () => {
               <AlertTriangle className="h-5 w-5 text-primary" /> Nearby Issues
               {mechanicProfile && <span className="text-xs text-muted-foreground font-normal">({mechanicProfile.pincode})</span>}
             </h2>
+
+            {/* Search Section */}
+            <div className="bg-card rounded-xl border border-border p-4 space-y-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Search className="h-4 w-4 text-primary" />
+                <span className="font-medium">Search Customers</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Select value={searchArea} onValueChange={setSearchArea}>
+                  <SelectTrigger className="bg-secondary border-0 text-sm">
+                    <SelectValue placeholder="Filter by Area" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {chennaiAreas.map((a) => (
+                      <SelectItem key={a} value={a}>{a}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  value={searchPincode}
+                  onChange={(e) => setSearchPincode(e.target.value.replace(/\D/g, ""))}
+                  placeholder="Pincode"
+                  maxLength={6}
+                  className="bg-secondary border-0 text-sm"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleSearch}>
+                  <Search className="h-3 w-3 mr-1" /> Search
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleResetSearch}>
+                  Reset
+                </Button>
+              </div>
+            </div>
+
             {loadingIssues && <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}
             {!loadingIssues && nearbyIssues.length === 0 && (
-              <div className="text-center text-muted-foreground text-sm py-10">No issues in your area right now.</div>
+              <div className="text-center text-muted-foreground text-sm py-10">No issues found. Try changing your search filters.</div>
             )}
             {nearbyIssues.map((issue: any) => (
               <div key={issue.id} className="bg-card rounded-xl border border-border p-5 animate-slide-up">
@@ -249,7 +309,7 @@ const MechanicDashboard = () => {
                         {issue.vehicle ? `${issue.vehicle.vehicle_type} ${issue.vehicle.vehicle_brand || ""} ${issue.vehicle.vehicle_model || ""}` : "Vehicle"}
                       </h3>
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <MapPin className="h-3 w-3" /> {issue.area || "Unknown"}
+                        <MapPin className="h-3 w-3" /> {issue.area || "Unknown"} • {issue.pincode || ""}
                       </span>
                     </div>
                   </div>
@@ -257,12 +317,6 @@ const MechanicDashboard = () => {
                 <p className="text-sm text-foreground mb-2">{issue.description}</p>
                 {issue.image_url && (
                   <img src={issue.image_url} alt="Issue" className="w-full h-40 object-cover rounded-lg mb-2" />
-                )}
-                {issue.ai_analysis && (
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    <span className="text-xs text-primary font-medium">AI: {(issue.ai_analysis as any).issue} • {(issue.ai_analysis as any).severity}</span>
-                  </div>
                 )}
 
                 {hasPhoneConsent(issue.id) && getUserPhone(issue.user_id) && (
@@ -272,32 +326,43 @@ const MechanicDashboard = () => {
                   </div>
                 )}
 
-                {respondingTo === issue.id ? (
-                  <div className="space-y-3 bg-secondary rounded-lg p-4 mt-2 animate-fade-in">
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">Price Quote (₹)</label>
-                      <Input value={quote} onChange={(e) => setQuote(e.target.value.replace(/\D/g, ""))} placeholder="1500" className="bg-card border-0" />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">Availability (date & time)</label>
-                      <Input value={availability} onChange={(e) => setAvailability(e.target.value)} placeholder="e.g. Tomorrow 10 AM" className="bg-card border-0" />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">Message (optional)</label>
-                      <Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Add details..." className="bg-card border-0 min-h-[60px]" />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={() => handleSubmitResponse(issue.id)} disabled={submittingResponse}>
-                        {submittingResponse ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Send className="h-3 w-3 mr-1" />} Submit
+                <div className="flex gap-2 mt-2">
+                  {hasResponded(issue.id) ? (
+                    <>
+                      <span className="text-xs text-muted-foreground flex items-center gap-1 bg-secondary rounded-lg px-3 py-1.5">
+                        ✓ Responded
+                      </span>
+                      <Button size="sm" variant="outline" onClick={() => navigate(`/chat/${issue.id}`)}>
+                        <MessageCircle className="h-3 w-3 mr-1" /> Chat
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => setRespondingTo(null)}>Cancel</Button>
+                    </>
+                  ) : respondingTo === issue.id ? (
+                    <div className="w-full space-y-3 bg-secondary rounded-lg p-4 animate-fade-in">
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Price Quote (₹)</label>
+                        <Input value={quote} onChange={(e) => setQuote(e.target.value.replace(/\D/g, ""))} placeholder="1500" className="bg-card border-0" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Availability (date & time)</label>
+                        <Input value={availability} onChange={(e) => setAvailability(e.target.value)} placeholder="e.g. Tomorrow 10 AM" className="bg-card border-0" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Message (optional)</label>
+                        <Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Add details..." className="bg-card border-0 min-h-[60px]" />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => handleSubmitResponse(issue.id)} disabled={submittingResponse}>
+                          {submittingResponse ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Send className="h-3 w-3 mr-1" />} Submit
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setRespondingTo(null)}>Cancel</Button>
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <Button size="sm" variant="outline" onClick={() => setRespondingTo(issue.id)} className="mt-1">
-                    <MessageCircle className="h-3 w-3 mr-1" /> Respond
-                  </Button>
-                )}
+                  ) : (
+                    <Button size="sm" variant="outline" onClick={() => setRespondingTo(issue.id)}>
+                      <MessageCircle className="h-3 w-3 mr-1" /> Respond
+                    </Button>
+                  )}
+                </div>
               </div>
             ))}
           </TabsContent>
@@ -319,16 +384,22 @@ const MechanicDashboard = () => {
                   <span className="flex items-center gap-1"><IndianRupee className="h-3 w-3" />{r.price_quote}</span>
                   {r.availability && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{r.availability}</span>}
                 </div>
-                {r.status === "accepted" && (
-                  <div className="mt-2 flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => navigate(`/chat/${r.issue_id}`)}>
-                      <MessageCircle className="h-3 w-3 mr-1" /> Chat
-                    </Button>
-                    {hasPhoneConsent(r.issue_id) && getUserPhone(r.issue?.user_id) && (
-                      <span className="flex items-center gap-1 text-xs text-success"><Phone className="h-3 w-3" /> +91 {getUserPhone(r.issue?.user_id)}</span>
-                    )}
+                {r.user_rating && (
+                  <div className="flex items-center gap-1 mt-2">
+                    <span className="text-xs text-muted-foreground">User Rating:</span>
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star key={s} className={`h-3 w-3 ${s <= r.user_rating ? "text-warning fill-warning" : "text-muted-foreground"}`} />
+                    ))}
                   </div>
                 )}
+                <div className="mt-2 flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => navigate(`/chat/${r.issue_id}`)}>
+                    <MessageCircle className="h-3 w-3 mr-1" /> Chat
+                  </Button>
+                  {hasPhoneConsent(r.issue_id) && getUserPhone(r.issue?.user_id) && (
+                    <span className="flex items-center gap-1 text-xs text-success"><Phone className="h-3 w-3" /> +91 {getUserPhone(r.issue?.user_id)}</span>
+                  )}
+                </div>
               </div>
             ))}
           </TabsContent>
