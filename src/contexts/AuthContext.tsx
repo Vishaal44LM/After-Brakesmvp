@@ -103,7 +103,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session: sess } }) => {
+    supabase.auth.getSession().then(({ data: { session: sess }, error }) => {
+      if (error) {
+        // Clear stale session
+        console.warn("Stale session cleared:", error.message);
+        supabase.auth.signOut();
+      }
       setSession(sess);
       setUser(sess?.user ?? null);
       if (sess?.user) {

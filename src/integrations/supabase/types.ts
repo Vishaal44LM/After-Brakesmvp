@@ -116,6 +116,7 @@ export type Database = {
           message: string | null
           price_quote: number
           status: string
+          user_rating: number | null
         }
         Insert: {
           availability?: string | null
@@ -126,6 +127,7 @@ export type Database = {
           message?: string | null
           price_quote: number
           status?: string
+          user_rating?: number | null
         }
         Update: {
           availability?: string | null
@@ -136,6 +138,7 @@ export type Database = {
           message?: string | null
           price_quote?: number
           status?: string
+          user_rating?: number | null
         }
         Relationships: [
           {
@@ -271,6 +274,27 @@ export type Database = {
           pincode?: string | null
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_pins: {
+        Row: {
+          created_at: string | null
+          id: string
+          phone: string
+          pin: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          phone: string
+          pin: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          phone?: string
+          pin?: string
         }
         Relationships: []
       }
