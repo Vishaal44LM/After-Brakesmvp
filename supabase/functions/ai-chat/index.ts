@@ -27,7 +27,8 @@ Guidelines:
 - Recommend visiting a mechanic for serious issues
 - Reference Chennai-specific conditions (heat, monsoon, road quality) when relevant
 - Keep responses under 200 words
-- Do NOT mention or estimate prices`;
+- Do NOT mention or estimate prices
+- Do NOT use asterisks (*) or markdown formatting in your responses. Use plain text only.`;
 
     const allMessages = [
       { role: "system", content: systemPrompt },
