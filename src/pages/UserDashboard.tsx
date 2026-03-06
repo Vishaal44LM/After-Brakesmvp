@@ -540,6 +540,11 @@ const UserDashboard = () => {
             ))}
           </TabsContent>
 
+          {/* FIND MECHANIC TAB */}
+          <TabsContent value="find-mechanic" className="space-y-4 mt-4">
+            <FindMechanicSection />
+          </TabsContent>
+
           {/* PROFILE TAB */}
           <TabsContent value="profile" className="space-y-4 mt-4">
             <section className="bg-card rounded-xl border border-border p-5 animate-slide-up">
