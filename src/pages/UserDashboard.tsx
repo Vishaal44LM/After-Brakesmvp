@@ -446,7 +446,7 @@ const UserDashboard = () => {
                     <div className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm ${
                       msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
                     }`}>
-                      <pre className="whitespace-pre-wrap font-sans">{msg.content}</pre>
+                      <pre className="whitespace-pre-wrap font-sans">{msg.content.replace(/\*+/g, "")}</pre>
                     </div>
                   </div>
                 ))}
