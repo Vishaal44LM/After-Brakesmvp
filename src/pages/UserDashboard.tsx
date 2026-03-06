@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { chennaiAreas } from "@/data/chennaiAreas";
+import { garageListings, GarageListing } from "@/data/garageListings";
 
 const vehicleTypes = ["Car", "Bike", "Scooter", "Auto", "Truck", "Bus", "Van"];
 const fuelTypes = ["Petrol", "Diesel", "Electric", "CNG", "Hybrid"];
@@ -23,6 +24,7 @@ const FindMechanicSection = () => {
   const [searchArea, setSearchArea] = useState("");
   const [searchPincode, setSearchPincode] = useState("");
   const [mechanics, setMechanics] = useState<any[]>([]);
+  const [localGarages, setLocalGarages] = useState<GarageListing[]>([]);
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
 
@@ -31,12 +33,19 @@ const FindMechanicSection = () => {
     setSearching(true);
     setSearched(true);
     try {
+      // Search registered mechanics from DB
       let query = supabase.from("mechanic_profiles").select("*");
       if (searchArea) query = query.eq("area", searchArea);
       if (searchPincode) query = query.eq("pincode", searchPincode);
       const { data, error } = await query;
       if (error) throw error;
       setMechanics(data || []);
+
+      // Search static garage listings
+      let filtered = garageListings;
+      if (searchArea) filtered = filtered.filter(g => g.area === searchArea);
+      if (searchPincode) filtered = filtered.filter(g => g.pincode === searchPincode);
+      setLocalGarages(filtered);
     } catch (e: any) {
       toast.error(e.message || "Search failed");
     } finally {
@@ -59,29 +68,63 @@ const FindMechanicSection = () => {
           {searching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />} Search Mechanics
         </Button>
       </div>
-      {searched && mechanics.length === 0 && !searching && (
+      {searched && mechanics.length === 0 && localGarages.length === 0 && !searching && (
         <p className="text-center text-muted-foreground text-sm py-6">No mechanics found in this area.</p>
       )}
-      {mechanics.map((m: any) => (
-        <div key={m.id} className="bg-secondary rounded-xl p-4 mb-3">
-          <div className="flex items-center gap-3">
-            {m.garage_photo_url ? (
-              <img src={m.garage_photo_url} className="h-12 w-12 rounded-full object-cover" />
-            ) : (
-              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">{m.garage_name?.[0] || "M"}</div>
-            )}
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-foreground text-sm">{m.garage_name}</h3>
-              <p className="text-xs text-muted-foreground">{m.name}</p>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{m.area}</span>
-                <span className="flex items-center gap-1"><Hash className="h-3 w-3" />{m.pincode}</span>
-                <span className="flex items-center gap-1"><Star className="h-3 w-3 text-warning" />{m.rating ? `${m.rating.toFixed(1)} (${m.total_ratings})` : "New"}</span>
+
+      {/* Registered Mechanics */}
+      {mechanics.length > 0 && (
+        <div className="mb-4">
+          <h3 className="text-sm font-semibold text-primary mb-2">Registered on After Brakes</h3>
+          {mechanics.map((m: any) => (
+            <div key={m.id} className="bg-secondary rounded-xl p-4 mb-3">
+              <div className="flex items-center gap-3">
+                {m.garage_photo_url ? (
+                  <img src={m.garage_photo_url} className="h-12 w-12 rounded-full object-cover" />
+                ) : (
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">{m.garage_name?.[0] || "M"}</div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-foreground text-sm">{m.garage_name}</h3>
+                  <p className="text-xs text-muted-foreground">{m.name}</p>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                    <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{m.area}</span>
+                    <span className="flex items-center gap-1"><Hash className="h-3 w-3" />{m.pincode}</span>
+                    <span className="flex items-center gap-1"><Star className="h-3 w-3 text-warning" />{m.rating ? `${m.rating.toFixed(1)} (${m.total_ratings})` : "New"}</span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          ))}
         </div>
-      ))}
+      )}
+
+      {/* Static Garage Listings */}
+      {localGarages.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-muted-foreground mb-2">Nearby Garages ({localGarages.length})</h3>
+          {localGarages.map((g, i) => (
+            <div key={`${g.name}-${i}`} className="bg-secondary rounded-xl p-4 mb-3">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">{g.name[0]}</div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-foreground text-sm truncate">{g.name}</h3>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                    <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{g.area}</span>
+                    <span className="flex items-center gap-1"><Hash className="h-3 w-3" />{g.pincode}</span>
+                    <span className="flex items-center gap-1"><Star className="h-3 w-3 text-warning" />{g.rating.toFixed(1)}</span>
+                    <span className="flex items-center gap-1"><Wrench className="h-3 w-3" />{g.type}</span>
+                  </div>
+                  {g.phone && <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1"><Phone className="h-3 w-3" />{g.phone}</p>}
+                </div>
+                <a href={g.maps_url} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                  <Button size="sm" variant="outline" className="text-xs"><MapPin className="h-3 w-3 mr-1" />Map</Button>
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 };
