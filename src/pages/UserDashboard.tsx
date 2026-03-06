@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { chennaiAreas } from "@/data/chennaiAreas";
+import { garageListings, GarageListing } from "@/data/garageListings";
 
 const vehicleTypes = ["Car", "Bike", "Scooter", "Auto", "Truck", "Bus", "Van"];
 const fuelTypes = ["Petrol", "Diesel", "Electric", "CNG", "Hybrid"];
