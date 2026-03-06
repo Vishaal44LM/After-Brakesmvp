@@ -381,12 +381,24 @@ const UserDashboard = () => {
                 className="bg-secondary border-0 mb-3 min-h-[80px]"
               />
 
-              <div className="flex gap-3 items-center mb-4">
+              <div className="flex gap-3 items-center mb-4 flex-wrap">
                 <label className="cursor-pointer">
                   <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-muted-foreground text-sm hover:text-primary transition-colors">
-                    <Camera className="h-4 w-4" /> {imagePreview ? "Change Photo" : "Add Photo"}
+                    <Camera className="h-4 w-4" /> {imagePreview ? "Change Photo" : "Take Photo"}
                   </div>
                   <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload} />
+                </label>
+                <label className="cursor-pointer">
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-muted-foreground text-sm hover:text-primary transition-colors">
+                    <Upload className="h-4 w-4" /> Add Photos
+                  </div>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                </label>
+                <label className="cursor-pointer">
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-muted-foreground text-sm hover:text-primary transition-colors">
+                    <Plus className="h-4 w-4" /> Add File
+                  </div>
+                  <input type="file" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.webp" className="hidden" onChange={handleImageUpload} />
                 </label>
                 {imagePreview && (
                   <img src={imagePreview} alt="Issue" className="h-12 w-12 rounded-lg object-cover border border-border" />
