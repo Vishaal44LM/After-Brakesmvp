@@ -344,10 +344,11 @@ const UserDashboard = () => {
       <Navbar role="user" onLogout={handleLogout} />
       <div className="container max-w-2xl py-4 px-4">
         <Tabs defaultValue="report" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-secondary">
+          <TabsList className="grid w-full grid-cols-5 bg-secondary">
             <TabsTrigger value="report" className="text-xs">Report</TabsTrigger>
             <TabsTrigger value="ai-chat" className="text-xs">AI Chat</TabsTrigger>
             <TabsTrigger value="responses" className="text-xs">Responses</TabsTrigger>
+            <TabsTrigger value="find-mechanic" className="text-xs">Find</TabsTrigger>
             <TabsTrigger value="profile" className="text-xs">Profile</TabsTrigger>
           </TabsList>
 
