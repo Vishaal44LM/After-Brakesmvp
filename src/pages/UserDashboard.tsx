@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Camera, Upload, Sparkles, Star, MapPin, MessageCircle, Clock, IndianRupee,
-  Loader2, Send, Bot, User, Check, Phone, Car, Edit2, Plus, Trash2, Save, Hash
+  Loader2, Send, Bot, User, Check, Phone, Car, Edit2, Plus, Trash2, Save, Hash, Search, Wrench
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +18,73 @@ import { chennaiAreas } from "@/data/chennaiAreas";
 const vehicleTypes = ["Car", "Bike", "Scooter", "Auto", "Truck", "Bus", "Van"];
 const fuelTypes = ["Petrol", "Diesel", "Electric", "CNG", "Hybrid"];
 const transmissions = ["Manual", "Automatic", "CVT", "DCT", "AMT"];
+
+const FindMechanicSection = () => {
+  const [searchArea, setSearchArea] = useState("");
+  const [searchPincode, setSearchPincode] = useState("");
+  const [mechanics, setMechanics] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searched, setSearched] = useState(false);
+
+  const handleSearch = async () => {
+    if (!searchArea && !searchPincode) { toast.error("Enter area or pincode to search"); return; }
+    setSearching(true);
+    setSearched(true);
+    try {
+      let query = supabase.from("mechanic_profiles").select("*");
+      if (searchArea) query = query.eq("area", searchArea);
+      if (searchPincode) query = query.eq("pincode", searchPincode);
+      const { data, error } = await query;
+      if (error) throw error;
+      setMechanics(data || []);
+    } catch (e: any) {
+      toast.error(e.message || "Search failed");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  return (
+    <section className="bg-card rounded-xl border border-border p-5 animate-slide-up">
+      <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+        <Search className="h-5 w-5 text-primary" /> Find Mechanics
+      </h2>
+      <div className="space-y-3 mb-4">
+        <Select value={searchArea} onValueChange={setSearchArea}>
+          <SelectTrigger className="bg-secondary border-0"><SelectValue placeholder="Select Area" /></SelectTrigger>
+          <SelectContent>{chennaiAreas.map((a) => (<SelectItem key={a} value={a}>{a}</SelectItem>))}</SelectContent>
+        </Select>
+        <Input value={searchPincode} onChange={(e) => setSearchPincode(e.target.value.replace(/\D/g, ""))} placeholder="Enter Pincode" maxLength={6} className="bg-secondary border-0" />
+        <Button className="w-full" onClick={handleSearch} disabled={searching}>
+          {searching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />} Search Mechanics
+        </Button>
+      </div>
+      {searched && mechanics.length === 0 && !searching && (
+        <p className="text-center text-muted-foreground text-sm py-6">No mechanics found in this area.</p>
+      )}
+      {mechanics.map((m: any) => (
+        <div key={m.id} className="bg-secondary rounded-xl p-4 mb-3">
+          <div className="flex items-center gap-3">
+            {m.garage_photo_url ? (
+              <img src={m.garage_photo_url} className="h-12 w-12 rounded-full object-cover" />
+            ) : (
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">{m.garage_name?.[0] || "M"}</div>
+            )}
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-foreground text-sm">{m.garage_name}</h3>
+              <p className="text-xs text-muted-foreground">{m.name}</p>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{m.area}</span>
+                <span className="flex items-center gap-1"><Hash className="h-3 w-3" />{m.pincode}</span>
+                <span className="flex items-center gap-1"><Star className="h-3 w-3 text-warning" />{m.rating ? `${m.rating.toFixed(1)} (${m.total_ratings})` : "New"}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+};
 
 const UserDashboard = () => {
   const navigate = useNavigate();
@@ -344,10 +411,11 @@ const UserDashboard = () => {
       <Navbar role="user" onLogout={handleLogout} />
       <div className="container max-w-2xl py-4 px-4">
         <Tabs defaultValue="report" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-secondary">
+          <TabsList className="grid w-full grid-cols-5 bg-secondary">
             <TabsTrigger value="report" className="text-xs">Report</TabsTrigger>
             <TabsTrigger value="ai-chat" className="text-xs">AI Chat</TabsTrigger>
             <TabsTrigger value="responses" className="text-xs">Responses</TabsTrigger>
+            <TabsTrigger value="find-mechanic" className="text-xs">Find</TabsTrigger>
             <TabsTrigger value="profile" className="text-xs">Profile</TabsTrigger>
           </TabsList>
 
@@ -381,12 +449,24 @@ const UserDashboard = () => {
                 className="bg-secondary border-0 mb-3 min-h-[80px]"
               />
 
-              <div className="flex gap-3 items-center mb-4">
+              <div className="flex gap-3 items-center mb-4 flex-wrap">
                 <label className="cursor-pointer">
                   <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-muted-foreground text-sm hover:text-primary transition-colors">
-                    <Camera className="h-4 w-4" /> {imagePreview ? "Change Photo" : "Add Photo"}
+                    <Camera className="h-4 w-4" /> {imagePreview ? "Change Photo" : "Take Photo"}
                   </div>
                   <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload} />
+                </label>
+                <label className="cursor-pointer">
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-muted-foreground text-sm hover:text-primary transition-colors">
+                    <Upload className="h-4 w-4" /> Add Photos
+                  </div>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                </label>
+                <label className="cursor-pointer">
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-muted-foreground text-sm hover:text-primary transition-colors">
+                    <Plus className="h-4 w-4" /> Add File
+                  </div>
+                  <input type="file" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.webp" className="hidden" onChange={handleImageUpload} />
                 </label>
                 {imagePreview && (
                   <img src={imagePreview} alt="Issue" className="h-12 w-12 rounded-lg object-cover border border-border" />
@@ -446,7 +526,7 @@ const UserDashboard = () => {
                     <div className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm ${
                       msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
                     }`}>
-                      <pre className="whitespace-pre-wrap font-sans">{msg.content}</pre>
+                      <pre className="whitespace-pre-wrap font-sans">{msg.content.replace(/\*+/g, "")}</pre>
                     </div>
                   </div>
                 ))}
@@ -525,6 +605,11 @@ const UserDashboard = () => {
                 )}
               </div>
             ))}
+          </TabsContent>
+
+          {/* FIND MECHANIC TAB */}
+          <TabsContent value="find-mechanic" className="space-y-4 mt-4">
+            <FindMechanicSection />
           </TabsContent>
 
           {/* PROFILE TAB */}
