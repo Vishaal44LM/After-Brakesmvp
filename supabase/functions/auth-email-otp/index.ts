@@ -74,7 +74,18 @@ serve(async (req) => {
       if (!resendRes.ok) {
         const errBody = await resendRes.text();
         console.error("Resend error:", errBody);
-        throw new Error("Failed to send OTP email");
+        // Parse Resend error for better user message
+        try {
+          const parsed = JSON.parse(errBody);
+          if (parsed.statusCode === 403 && parsed.message?.includes("testing emails")) {
+            return new Response(JSON.stringify({ 
+              error: "Free Resend plan: OTP can only be sent to afterbrakes@gmail.com. Please verify a domain on resend.com/domains to send to any email." 
+            }), {
+              status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        } catch (_) {}
+        throw new Error("Failed to send OTP email. Please try again.");
       }
 
       return new Response(JSON.stringify({ success: true, message: "OTP sent to your email" }), {
