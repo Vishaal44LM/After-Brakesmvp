@@ -27,7 +27,7 @@ serve(async (req) => {
 
     // ACTION: SEND-OTP
     if (action === "send-otp") {
-      if (!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+      if (!email || !email.includes("@") || !email.includes(".")) {
         return new Response(JSON.stringify({ error: "Invalid email address" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
