@@ -68,41 +68,56 @@ export type Database = {
         Row: {
           area: string
           created_at: string | null
+          garage_address: string | null
           garage_name: string
           garage_photo_url: string | null
+          google_maps_link: string | null
           id: string
+          id_proof_url: string | null
+          id_proof_verified: boolean | null
           name: string
           pincode: string
           rating: number | null
           total_ratings: number | null
           updated_at: string | null
           user_id: string
+          years_of_experience: number | null
         }
         Insert: {
           area: string
           created_at?: string | null
+          garage_address?: string | null
           garage_name: string
           garage_photo_url?: string | null
+          google_maps_link?: string | null
           id?: string
+          id_proof_url?: string | null
+          id_proof_verified?: boolean | null
           name: string
           pincode: string
           rating?: number | null
           total_ratings?: number | null
           updated_at?: string | null
           user_id: string
+          years_of_experience?: number | null
         }
         Update: {
           area?: string
           created_at?: string | null
+          garage_address?: string | null
           garage_name?: string
           garage_photo_url?: string | null
+          google_maps_link?: string | null
           id?: string
+          id_proof_url?: string | null
+          id_proof_verified?: boolean | null
           name?: string
           pincode?: string
           rating?: number | null
           total_ratings?: number | null
           updated_at?: string | null
           user_id?: string
+          years_of_experience?: number | null
         }
         Relationships: []
       }
