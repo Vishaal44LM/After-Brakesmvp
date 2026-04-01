@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -8,13 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Camera, Upload, Sparkles, Star, MapPin, MessageCircle, Clock, IndianRupee,
-  Loader2, Send, Bot, User, Check, Phone, Car, Edit2, Plus, Trash2, Save, Hash, Search, Wrench
+  Loader2, Send, Bot, User, Check, Phone, Car, Edit2, Plus, Trash2, Save, Hash, Search, Wrench, Mic, MicOff, Volume2
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { chennaiAreas } from "@/data/chennaiAreas";
-import { garageListings, GarageListing } from "@/data/garageListings";
 
 const vehicleTypes = ["Car", "Bike", "Scooter", "Auto", "Truck", "Bus", "Van"];
 const fuelTypes = ["Petrol", "Diesel", "Electric", "CNG", "Hybrid"];
@@ -24,7 +23,6 @@ const FindMechanicSection = () => {
   const [searchArea, setSearchArea] = useState("");
   const [searchPincode, setSearchPincode] = useState("");
   const [mechanics, setMechanics] = useState<any[]>([]);
-  const [localGarages, setLocalGarages] = useState<GarageListing[]>([]);
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
 
@@ -33,19 +31,12 @@ const FindMechanicSection = () => {
     setSearching(true);
     setSearched(true);
     try {
-      // Search registered mechanics from DB
       let query = supabase.from("mechanic_profiles").select("*");
       if (searchArea) query = query.eq("area", searchArea);
       if (searchPincode) query = query.eq("pincode", searchPincode);
       const { data, error } = await query;
       if (error) throw error;
       setMechanics(data || []);
-
-      // Search static garage listings
-      let filtered = garageListings;
-      if (searchArea) filtered = filtered.filter(g => g.area === searchArea);
-      if (searchPincode) filtered = filtered.filter(g => g.pincode === searchPincode);
-      setLocalGarages(filtered);
     } catch (e: any) {
       toast.error(e.message || "Search failed");
     } finally {
@@ -68,14 +59,13 @@ const FindMechanicSection = () => {
           {searching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />} Search Mechanics
         </Button>
       </div>
-      {searched && mechanics.length === 0 && localGarages.length === 0 && !searching && (
-        <p className="text-center text-muted-foreground text-sm py-6">No mechanics found in this area.</p>
+      {searched && mechanics.length === 0 && !searching && (
+        <p className="text-center text-muted-foreground text-sm py-6">No registered mechanics found in this area.</p>
       )}
 
-      {/* Registered Mechanics */}
       {mechanics.length > 0 && (
-        <div className="mb-4">
-          <h3 className="text-sm font-semibold text-primary mb-2">Registered on After Brakes</h3>
+        <div>
+          <h3 className="text-sm font-semibold text-primary mb-2">Registered Mechanics ({mechanics.length})</h3>
           {mechanics.map((m: any) => (
             <div key={m.id} className="bg-secondary rounded-xl p-4 mb-3">
               <div className="flex items-center gap-3">
@@ -87,44 +77,200 @@ const FindMechanicSection = () => {
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-foreground text-sm">{m.garage_name}</h3>
                   <p className="text-xs text-muted-foreground">{m.name}</p>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
                     <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{m.area}</span>
                     <span className="flex items-center gap-1"><Hash className="h-3 w-3" />{m.pincode}</span>
-                    <span className="flex items-center gap-1"><Star className="h-3 w-3 text-warning" />{m.rating ? `${m.rating.toFixed(1)} (${m.total_ratings})` : "New"}</span>
+                    <span className="flex items-center gap-1"><Star className="h-3 w-3 text-warning" />{m.rating ? `${Number(m.rating).toFixed(1)} (${m.total_ratings})` : "New"}</span>
+                    {m.years_of_experience && <span className="text-xs">{m.years_of_experience} yrs exp</span>}
                   </div>
+                  {m.garage_address && <p className="text-xs text-muted-foreground mt-0.5">{m.garage_address}</p>}
                 </div>
+                {m.google_maps_link && (
+                  <a href={m.google_maps_link} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                    <Button size="sm" variant="outline" className="text-xs"><MapPin className="h-3 w-3 mr-1" />Map</Button>
+                  </a>
+                )}
               </div>
             </div>
           ))}
         </div>
       )}
+    </section>
+  );
+};
 
-      {/* Static Garage Listings */}
-      {localGarages.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-muted-foreground mb-2">Nearby Garages ({localGarages.length})</h3>
-          {localGarages.map((g, i) => (
-            <div key={`${g.name}-${i}`} className="bg-secondary rounded-xl p-4 mb-3">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">{g.name[0]}</div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-foreground text-sm truncate">{g.name}</h3>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
-                    <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{g.area}</span>
-                    <span className="flex items-center gap-1"><Hash className="h-3 w-3" />{g.pincode}</span>
-                    <span className="flex items-center gap-1"><Star className="h-3 w-3 text-warning" />{g.rating.toFixed(1)}</span>
-                    <span className="flex items-center gap-1"><Wrench className="h-3 w-3" />{g.type}</span>
-                  </div>
-                  {g.phone && <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1"><Phone className="h-3 w-3" />{g.phone}</p>}
-                </div>
-                <a href={g.maps_url} target="_blank" rel="noopener noreferrer" className="shrink-0">
-                  <Button size="sm" variant="outline" className="text-xs"><MapPin className="h-3 w-3 mr-1" />Map</Button>
-                </a>
-              </div>
-            </div>
-          ))}
+// AI Voice Mechanic Component
+const AIVoiceMechanic = ({ profile, vehicles }: { profile: any; vehicles: any[] }) => {
+  const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  const recognitionRef = useRef<any>(null);
+  const synthRef = useRef(window.speechSynthesis);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const speak = useCallback((text: string) => {
+    synthRef.current.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.95;
+    utterance.pitch = 1;
+    utterance.lang = "en-IN";
+    setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    synthRef.current.speak(utterance);
+  }, []);
+
+  const sendToAI = useCallback(async (userText: string) => {
+    const userMsg = { role: "user" as const, content: userText };
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
+    setIsProcessing(true);
+
+    const vehicleInfo = vehicles.map((v: any) => `${v.vehicle_type} ${v.vehicle_brand || ""} ${v.vehicle_model || ""}`).join(", ");
+
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-voice-mechanic", {
+        body: {
+          messages: newMessages,
+          userContext: { area: profile?.area, pincode: profile?.pincode, vehicles: vehicleInfo },
+        },
+      });
+
+      if (error) throw error;
+      const reply = data?.reply || "Sorry, please try again.";
+      const assistantMsg = { role: "assistant" as const, content: reply };
+      setMessages(prev => [...prev, assistantMsg]);
+      speak(reply);
+    } catch (e: any) {
+      toast.error(e.message || "Voice AI error");
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [messages, profile, vehicles, speak]);
+
+  const startListening = useCallback(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast.error("Speech recognition not supported in this browser. Use Chrome.");
+      return;
+    }
+
+    synthRef.current.cancel();
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = "en-IN";
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onresult = (event: any) => {
+      const result = event.results[event.results.length - 1];
+      setTranscript(result[0].transcript);
+      if (result.isFinal) {
+        const finalText = result[0].transcript;
+        setTranscript("");
+        sendToAI(finalText);
+      }
+    };
+    recognition.onerror = (e: any) => {
+      console.error("Speech error:", e.error);
+      setIsListening(false);
+      if (e.error !== "aborted") toast.error("Could not hear you. Try again.");
+    };
+    recognition.onend = () => setIsListening(false);
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  }, [sendToAI]);
+
+  const stopListening = useCallback(() => {
+    recognitionRef.current?.stop();
+    setIsListening(false);
+  }, []);
+
+  const resetConversation = () => {
+    synthRef.current.cancel();
+    setMessages([]);
+    setTranscript("");
+  };
+
+  return (
+    <section className="bg-card rounded-xl border border-border overflow-hidden animate-slide-up">
+      <div className="p-4 border-b border-border flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Mic className="h-5 w-5 text-primary" />
+          <h2 className="text-sm font-semibold text-foreground">AI Voice Mechanic</h2>
         </div>
-      )}
+        {messages.length > 0 && (
+          <Button size="sm" variant="ghost" onClick={resetConversation} className="text-xs text-muted-foreground">
+            Clear
+          </Button>
+        )}
+      </div>
+
+      <div className="h-[320px] overflow-y-auto p-4 space-y-3">
+        {messages.length === 0 && (
+          <div className="text-center text-muted-foreground text-sm py-10">
+            <Mic className="h-10 w-10 mx-auto mb-3 text-primary/50" />
+            <p className="font-medium mb-1">Tap the mic and describe your vehicle issue</p>
+            <p className="text-xs">Example: "My car won't start" or "I hear a clicking sound"</p>
+          </div>
+        )}
+        {messages.map((msg, i) => (
+          <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+            <div className={`max-w-[85%] rounded-xl px-4 py-2.5 text-sm ${
+              msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+            }`}>
+              {msg.role === "assistant" && <Volume2 className="h-3 w-3 inline mr-1 opacity-50" />}
+              {msg.content}
+            </div>
+          </div>
+        ))}
+        {isProcessing && (
+          <div className="flex justify-start">
+            <div className="bg-secondary rounded-xl px-4 py-2.5">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            </div>
+          </div>
+        )}
+        {transcript && (
+          <div className="flex justify-end">
+            <div className="max-w-[85%] rounded-xl px-4 py-2.5 text-sm bg-primary/30 text-foreground italic">
+              {transcript}...
+            </div>
+          </div>
+        )}
+        <div ref={chatEndRef} />
+      </div>
+
+      <div className="p-4 border-t border-border flex flex-col items-center gap-3">
+        {isSpeaking && (
+          <p className="text-xs text-primary animate-pulse flex items-center gap-1">
+            <Volume2 className="h-3 w-3" /> AI is speaking...
+          </p>
+        )}
+        <button
+          onClick={isListening ? stopListening : startListening}
+          disabled={isProcessing}
+          className={`h-16 w-16 rounded-full flex items-center justify-center transition-all ${
+            isListening
+              ? "bg-destructive text-destructive-foreground animate-pulse scale-110"
+              : isProcessing
+              ? "bg-muted text-muted-foreground cursor-not-allowed"
+              : "bg-primary text-primary-foreground hover:scale-105"
+          }`}
+        >
+          {isListening ? <MicOff className="h-7 w-7" /> : <Mic className="h-7 w-7" />}
+        </button>
+        <p className="text-xs text-muted-foreground">
+          {isListening ? "Listening... Tap to stop" : isProcessing ? "Processing..." : "Tap to speak"}
+        </p>
+      </div>
     </section>
   );
 };
@@ -141,6 +287,9 @@ const UserDashboard = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [analysis, setAnalysis] = useState<any>(null);
+
+  // AI Tab State
+  const [aiMode, setAiMode] = useState<"chat" | "voice">("chat");
 
   // AI Chat State
   const [chatMessages, setChatMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
@@ -254,7 +403,6 @@ const UserDashboard = () => {
       const vehicle = vehicles.find((v: any) => v.id === selectedVehicle);
       const vehicleInfo = vehicle ? `${vehicle.vehicle_type} ${vehicle.vehicle_brand || ""} ${vehicle.vehicle_model || ""} ${vehicle.vehicle_year || ""}`.trim() : "";
 
-      // Save issue to database first
       const { data: insertedIssue, error: issueError } = await supabase.from("issues").insert({
         user_id: user.id,
         description: issueText,
@@ -273,7 +421,6 @@ const UserDashboard = () => {
       setSelectedVehicle("");
       setSubmitting(false);
 
-      // AI Analysis (runs after submit)
       setAnalyzing(true);
       const { data: aiData, error: aiError } = await supabase.functions.invoke("analyze-issue", {
         body: { description: issueText, imageBase64, vehicleInfo },
@@ -284,7 +431,6 @@ const UserDashboard = () => {
           toast.error(aiData.analysis.image_rejection_reason || "Please upload a valid vehicle image");
         } else {
           setAnalysis(aiData.analysis);
-          // Update issue with AI analysis
           await supabase.from("issues").update({ ai_analysis: aiData.analysis }).eq("id", insertedIssue.id);
         }
       }
@@ -456,7 +602,7 @@ const UserDashboard = () => {
         <Tabs defaultValue="report" className="w-full">
           <TabsList className="grid w-full grid-cols-5 bg-secondary">
             <TabsTrigger value="report" className="text-xs">Report</TabsTrigger>
-            <TabsTrigger value="ai-chat" className="text-xs">AI Chat</TabsTrigger>
+            <TabsTrigger value="ai" className="text-xs">AI</TabsTrigger>
             <TabsTrigger value="responses" className="text-xs">Responses</TabsTrigger>
             <TabsTrigger value="find-mechanic" className="text-xs">Find</TabsTrigger>
             <TabsTrigger value="profile" className="text-xs">Profile</TabsTrigger>
@@ -550,47 +696,70 @@ const UserDashboard = () => {
             )}
           </TabsContent>
 
-          {/* AI CHAT TAB */}
-          <TabsContent value="ai-chat" className="mt-4">
-            <section className="bg-card rounded-xl border border-border overflow-hidden animate-slide-up">
-              <div className="p-4 border-b border-border flex items-center gap-2">
-                <Bot className="h-5 w-5 text-primary" />
-                <h2 className="text-sm font-semibold text-foreground">AI Assistant</h2>
-              </div>
-              <div className="h-[400px] overflow-y-auto p-4 space-y-3">
-                {chatMessages.length === 0 && (
-                  <div className="text-center text-muted-foreground text-sm py-10">
-                    <Bot className="h-10 w-10 mx-auto mb-3 text-primary/50" />
-                    <p>Ask me about vehicle issues, maintenance tips, or finding mechanics in your area.</p>
-                  </div>
-                )}
-                {chatMessages.map((msg, i) => (
-                  <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                    <div className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm ${
-                      msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
-                    }`}>
-                      <pre className="whitespace-pre-wrap font-sans">{msg.content.replace(/\*+/g, "")}</pre>
+          {/* AI TAB - with sub-options */}
+          <TabsContent value="ai" className="mt-4 space-y-4">
+            <div className="flex gap-2 mb-2">
+              <Button
+                size="sm"
+                variant={aiMode === "chat" ? "default" : "outline"}
+                onClick={() => setAiMode("chat")}
+                className="flex-1"
+              >
+                <Bot className="h-4 w-4 mr-1" /> AI Chat
+              </Button>
+              <Button
+                size="sm"
+                variant={aiMode === "voice" ? "default" : "outline"}
+                onClick={() => setAiMode("voice")}
+                className="flex-1"
+              >
+                <Mic className="h-4 w-4 mr-1" /> AI Voice Mechanic
+              </Button>
+            </div>
+
+            {aiMode === "chat" ? (
+              <section className="bg-card rounded-xl border border-border overflow-hidden animate-slide-up">
+                <div className="p-4 border-b border-border flex items-center gap-2">
+                  <Bot className="h-5 w-5 text-primary" />
+                  <h2 className="text-sm font-semibold text-foreground">AI Assistant</h2>
+                </div>
+                <div className="h-[400px] overflow-y-auto p-4 space-y-3">
+                  {chatMessages.length === 0 && (
+                    <div className="text-center text-muted-foreground text-sm py-10">
+                      <Bot className="h-10 w-10 mx-auto mb-3 text-primary/50" />
+                      <p>Ask me about vehicle issues, maintenance tips, or finding mechanics in your area.</p>
                     </div>
-                  </div>
-                ))}
-                {chatLoading && chatMessages[chatMessages.length - 1]?.role !== "assistant" && (
-                  <div className="flex justify-start"><div className="bg-secondary rounded-xl px-4 py-2.5"><Loader2 className="h-4 w-4 animate-spin text-primary" /></div></div>
-                )}
-                <div ref={chatEndRef} />
-              </div>
-              <div className="p-3 border-t border-border flex gap-2">
-                <Input
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendChat()}
-                  placeholder="Ask about vehicle issues..."
-                  className="bg-secondary border-0"
-                />
-                <Button size="icon" onClick={handleSendChat} disabled={chatLoading || !chatInput.trim()}>
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-            </section>
+                  )}
+                  {chatMessages.map((msg, i) => (
+                    <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm ${
+                        msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+                      }`}>
+                        <pre className="whitespace-pre-wrap font-sans">{msg.content.replace(/\*+/g, "")}</pre>
+                      </div>
+                    </div>
+                  ))}
+                  {chatLoading && chatMessages[chatMessages.length - 1]?.role !== "assistant" && (
+                    <div className="flex justify-start"><div className="bg-secondary rounded-xl px-4 py-2.5"><Loader2 className="h-4 w-4 animate-spin text-primary" /></div></div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+                <div className="p-3 border-t border-border flex gap-2">
+                  <Input
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendChat()}
+                    placeholder="Ask about vehicle issues..."
+                    className="bg-secondary border-0"
+                  />
+                  <Button size="icon" onClick={handleSendChat} disabled={chatLoading || !chatInput.trim()}>
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              </section>
+            ) : (
+              <AIVoiceMechanic profile={profile} vehicles={vehicles} />
+            )}
           </TabsContent>
 
           {/* RESPONSES TAB */}

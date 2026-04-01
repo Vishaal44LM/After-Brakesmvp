@@ -2,10 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { chennaiAreas } from "@/data/chennaiAreas";
 import { toast } from "sonner";
-import { User, Store, MapPin, Hash, Camera, Loader2, ArrowLeft } from "lucide-react";
+import { User, Store, MapPin, Hash, Camera, Loader2, ArrowLeft, FileCheck, Clock, Link } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -16,8 +17,13 @@ const MechanicSetup = () => {
   const [garageName, setGarageName] = useState("");
   const [area, setArea] = useState("");
   const [pincode, setPincode] = useState("");
+  const [garageAddress, setGarageAddress] = useState("");
+  const [googleMapsLink, setGoogleMapsLink] = useState("");
+  const [yearsOfExperience, setYearsOfExperience] = useState("");
   const [garagePhoto, setGaragePhoto] = useState<File | null>(null);
   const [garagePhotoPreview, setGaragePhotoPreview] = useState<string | null>(null);
+  const [idProofFile, setIdProofFile] = useState<File | null>(null);
+  const [idProofPreview, setIdProofPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -30,18 +36,31 @@ const MechanicSetup = () => {
     }
   };
 
+  const handleIdProofUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setIdProofFile(file);
+      const reader = new FileReader();
+      reader.onload = () => setIdProofPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!name.trim()) { toast.error("Enter your name"); return; }
     if (!garageName.trim()) { toast.error("Enter your garage name"); return; }
     if (!area) { toast.error("Select your area"); return; }
     if (pincode.length !== 6) { toast.error("Enter a valid 6-digit pincode"); return; }
+    if (!garageAddress.trim()) { toast.error("Enter your garage address"); return; }
+    if (!idProofFile) { toast.error("Upload an ID proof"); return; }
+    if (!yearsOfExperience) { toast.error("Enter years of experience"); return; }
     if (!user) { toast.error("Please login first"); return; }
 
     setLoading(true);
     try {
       let garagePhotoUrl: string | null = null;
+      let idProofUrl: string | null = null;
 
-      // Upload garage photo
       if (garagePhoto) {
         const ext = garagePhoto.name.split(".").pop();
         const filePath = `${user.id}/garage.${ext}`;
@@ -52,6 +71,16 @@ const MechanicSetup = () => {
         const { data: urlData } = supabase.storage.from("garage-photos").getPublicUrl(filePath);
         garagePhotoUrl = urlData.publicUrl;
       }
+
+      // Upload ID proof
+      const idExt = idProofFile.name.split(".").pop();
+      const idPath = `${user.id}/id-proof.${idExt}`;
+      const { error: idUploadError } = await supabase.storage
+        .from("garage-photos")
+        .upload(idPath, idProofFile, { upsert: true });
+      if (idUploadError) throw idUploadError;
+      const { data: idUrlData } = supabase.storage.from("garage-photos").getPublicUrl(idPath);
+      idProofUrl = idUrlData.publicUrl;
 
       // Update profile
       await supabase.from("profiles").update({ name, area, pincode }).eq("user_id", user.id);
@@ -64,7 +93,12 @@ const MechanicSetup = () => {
         garage_photo_url: garagePhotoUrl,
         area,
         pincode,
-      });
+        garage_address: garageAddress,
+        google_maps_link: googleMapsLink || null,
+        years_of_experience: parseInt(yearsOfExperience) || null,
+        id_proof_url: idProofUrl,
+        id_proof_verified: false,
+      } as any);
       if (error) throw error;
 
       await refreshProfile();
@@ -119,6 +153,31 @@ const MechanicSetup = () => {
           <div>
             <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><Hash className="h-4 w-4" /> Pincode</label>
             <Input value={pincode} onChange={(e) => setPincode(e.target.value.replace(/\D/g, ""))} placeholder="6-digit pincode" maxLength={6} className="bg-secondary border-0" />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><MapPin className="h-4 w-4" /> Garage Address <span className="text-destructive">*</span></label>
+            <Textarea value={garageAddress} onChange={(e) => setGarageAddress(e.target.value)} placeholder="Full garage address" className="bg-secondary border-0 min-h-[60px]" />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><Link className="h-4 w-4" /> Google Maps Link <span className="text-xs">(optional)</span></label>
+            <Input value={googleMapsLink} onChange={(e) => setGoogleMapsLink(e.target.value)} placeholder="https://maps.google.com/..." className="bg-secondary border-0" />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><Clock className="h-4 w-4" /> Years of Experience</label>
+            <Input value={yearsOfExperience} onChange={(e) => setYearsOfExperience(e.target.value.replace(/\D/g, ""))} placeholder="e.g. 5" maxLength={2} className="bg-secondary border-0" />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><FileCheck className="h-4 w-4" /> ID Proof <span className="text-destructive">*</span></label>
+            <p className="text-xs text-muted-foreground mb-2">Upload any government ID (Aadhaar, PAN, Driving License, etc.)</p>
+            <label className="cursor-pointer">
+              <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-secondary text-muted-foreground text-sm hover:text-primary transition-colors border border-dashed border-border">
+                <FileCheck className="h-4 w-4" /> {idProofPreview ? "Change ID Proof" : "Upload ID Proof"}
+              </div>
+              <input type="file" accept="image/*,.pdf" className="hidden" onChange={handleIdProofUpload} />
+            </label>
+            {idProofPreview && (
+              <img src={idProofPreview} alt="ID Proof" className="h-20 rounded-lg mt-2 object-cover border border-border" />
+            )}
           </div>
           <Button className="w-full mt-2" onClick={handleSubmit} disabled={loading}>
             {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}

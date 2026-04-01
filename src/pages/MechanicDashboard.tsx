@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Car, MapPin, AlertTriangle, IndianRupee, MessageCircle, Send, Loader2,
-  Clock, Star, Edit2, Save, Camera, Store, Hash, User, Phone, Search
+  Clock, Star, Edit2, Save, Camera, Store, Hash, User, Phone, Search, Link, FileCheck
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,7 +27,6 @@ const MechanicDashboard = () => {
   const [availability, setAvailability] = useState("");
   const [submittingResponse, setSubmittingResponse] = useState(false);
 
-  // Search state
   const [searchArea, setSearchArea] = useState("");
   const [searchPincode, setSearchPincode] = useState("");
 
@@ -42,6 +41,9 @@ const MechanicDashboard = () => {
   const [editGarageName, setEditGarageName] = useState(mechanicProfile?.garage_name || "");
   const [editArea, setEditArea] = useState(mechanicProfile?.area || "");
   const [editPincode, setEditPincode] = useState(mechanicProfile?.pincode || "");
+  const [editAddress, setEditAddress] = useState("");
+  const [editMapsLink, setEditMapsLink] = useState("");
+  const [editExperience, setEditExperience] = useState("");
   const [garagePhoto, setGaragePhoto] = useState<File | null>(null);
   const [garagePhotoPreview, setGaragePhotoPreview] = useState<string | null>(mechanicProfile?.garage_photo_url || null);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -53,8 +55,20 @@ const MechanicDashboard = () => {
       setEditArea(mechanicProfile.area);
       setEditPincode(mechanicProfile.pincode);
       setGaragePhotoPreview(mechanicProfile.garage_photo_url);
+      // Load extended fields
+      loadExtendedProfile();
     }
   }, [mechanicProfile]);
+
+  const loadExtendedProfile = async () => {
+    if (!user) return;
+    const { data } = await supabase.from("mechanic_profiles").select("garage_address, google_maps_link, years_of_experience").eq("user_id", user.id).single();
+    if (data) {
+      setEditAddress((data as any).garage_address || "");
+      setEditMapsLink((data as any).google_maps_link || "");
+      setEditExperience((data as any).years_of_experience?.toString() || "");
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -77,20 +91,11 @@ const MechanicDashboard = () => {
       const filterPincode = overridePincode || searchPincode || mechanicProfile?.pincode;
       const filterArea = overrideArea || searchArea;
 
-      if (filterPincode) {
-        query = query.eq("pincode", filterPincode);
-      }
-      if (filterArea) {
-        query = query.eq("area", filterArea);
-      }
+      if (filterPincode) query = query.eq("pincode", filterPincode);
+      if (filterArea) query = query.eq("area", filterArea);
 
       const { data, error } = await query;
-      if (error) {
-        console.error("Fetch issues error:", error);
-        setNearbyIssues([]);
-        setLoadingIssues(false);
-        return;
-      }
+      if (error) { setNearbyIssues([]); setLoadingIssues(false); return; }
 
       if (data && data.length > 0) {
         const vehicleIds = data.filter((i: any) => i.vehicle_id).map((i: any) => i.vehicle_id);
@@ -103,33 +108,20 @@ const MechanicDashboard = () => {
       } else {
         setNearbyIssues([]);
       }
-    } catch (e: any) {
-      console.error("fetchNearbyIssues error:", e);
+    } catch {
       setNearbyIssues([]);
     } finally {
       setLoadingIssues(false);
     }
   };
 
-  const handleSearch = () => {
-    fetchNearbyIssues(searchArea, searchPincode);
-  };
-
-  const handleResetSearch = () => {
-    setSearchArea("");
-    setSearchPincode("");
-    fetchNearbyIssues("", "");
-  };
+  const handleSearch = () => fetchNearbyIssues(searchArea, searchPincode);
+  const handleResetSearch = () => { setSearchArea(""); setSearchPincode(""); fetchNearbyIssues("", ""); };
 
   const fetchMyResponses = async () => {
     if (!user) return;
     setLoadingMyResponses(true);
-    const { data } = await supabase
-      .from("mechanic_responses")
-      .select("*")
-      .eq("mechanic_id", user.id)
-      .order("created_at", { ascending: false });
-
+    const { data } = await supabase.from("mechanic_responses").select("*").eq("mechanic_id", user.id).order("created_at", { ascending: false });
     if (data && data.length > 0) {
       const issueIds = data.map((r: any) => r.issue_id);
       setRespondedIssueIds(new Set(issueIds));
@@ -144,13 +136,8 @@ const MechanicDashboard = () => {
 
   const fetchPhoneConsents = async () => {
     if (!user) return;
-    const { data } = await supabase
-      .from("phone_share_consents")
-      .select("*")
-      .eq("mechanic_id", user.id)
-      .eq("granted", true);
+    const { data } = await supabase.from("phone_share_consents").select("*").eq("mechanic_id", user.id).eq("granted", true);
     setPhoneConsents(data || []);
-
     if (data && data.length > 0) {
       const userIds = [...new Set(data.map((c: any) => c.user_id))];
       const { data: profiles } = await supabase.from("profiles").select("user_id, phone").in("user_id", userIds);
@@ -202,6 +189,7 @@ const MechanicDashboard = () => {
       toast.error("Fill all fields correctly");
       return;
     }
+    if (!editAddress.trim()) { toast.error("Garage address is mandatory"); return; }
     setSavingProfile(true);
     try {
       let photoUrl = mechanicProfile?.garage_photo_url || null;
@@ -219,7 +207,10 @@ const MechanicDashboard = () => {
         area: editArea,
         pincode: editPincode,
         garage_photo_url: photoUrl,
-      }).eq("user_id", user!.id);
+        garage_address: editAddress,
+        google_maps_link: editMapsLink || null,
+        years_of_experience: parseInt(editExperience) || null,
+      } as any).eq("user_id", user!.id);
 
       await supabase.from("profiles").update({ name: editName, area: editArea, pincode: editPincode }).eq("user_id", user!.id);
       await refreshProfile();
@@ -231,11 +222,7 @@ const MechanicDashboard = () => {
     }
   };
 
-  const handleLogout = async () => {
-    await signOut();
-    navigate("/");
-  };
-
+  const handleLogout = async () => { await signOut(); navigate("/"); };
   const getUserPhone = (issueUserId: string) => userPhones[issueUserId] || null;
   const hasPhoneConsent = (issueId: string) => phoneConsents.some((c: any) => c.issue_id === issueId);
   const hasResponded = (issueId: string) => respondedIssueIds.has(issueId);
@@ -258,7 +245,6 @@ const MechanicDashboard = () => {
               {mechanicProfile && <span className="text-xs text-muted-foreground font-normal">({mechanicProfile.pincode})</span>}
             </h2>
 
-            {/* Search Section */}
             <div className="bg-card rounded-xl border border-border p-4 space-y-3">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Search className="h-4 w-4 text-primary" />
@@ -266,30 +252,14 @@ const MechanicDashboard = () => {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <Select value={searchArea} onValueChange={setSearchArea}>
-                  <SelectTrigger className="bg-secondary border-0 text-sm">
-                    <SelectValue placeholder="Filter by Area" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {chennaiAreas.map((a) => (
-                      <SelectItem key={a} value={a}>{a}</SelectItem>
-                    ))}
-                  </SelectContent>
+                  <SelectTrigger className="bg-secondary border-0 text-sm"><SelectValue placeholder="Filter by Area" /></SelectTrigger>
+                  <SelectContent>{chennaiAreas.map((a) => (<SelectItem key={a} value={a}>{a}</SelectItem>))}</SelectContent>
                 </Select>
-                <Input
-                  value={searchPincode}
-                  onChange={(e) => setSearchPincode(e.target.value.replace(/\D/g, ""))}
-                  placeholder="Pincode"
-                  maxLength={6}
-                  className="bg-secondary border-0 text-sm"
-                />
+                <Input value={searchPincode} onChange={(e) => setSearchPincode(e.target.value.replace(/\D/g, ""))} placeholder="Pincode" maxLength={6} className="bg-secondary border-0 text-sm" />
               </div>
               <div className="flex gap-2">
-                <Button size="sm" onClick={handleSearch}>
-                  <Search className="h-3 w-3 mr-1" /> Search
-                </Button>
-                <Button size="sm" variant="outline" onClick={handleResetSearch}>
-                  Reset
-                </Button>
+                <Button size="sm" onClick={handleSearch}><Search className="h-3 w-3 mr-1" /> Search</Button>
+                <Button size="sm" variant="outline" onClick={handleResetSearch}>Reset</Button>
               </div>
             </div>
 
@@ -329,9 +299,7 @@ const MechanicDashboard = () => {
                 <div className="flex gap-2 mt-2">
                   {hasResponded(issue.id) ? (
                     <>
-                      <span className="text-xs text-muted-foreground flex items-center gap-1 bg-secondary rounded-lg px-3 py-1.5">
-                        ✓ Responded
-                      </span>
+                      <span className="text-xs text-muted-foreground flex items-center gap-1 bg-secondary rounded-lg px-3 py-1.5">✓ Responded</span>
                       <Button size="sm" variant="outline" onClick={() => navigate(`/chat/${issue.id}`)}>
                         <MessageCircle className="h-3 w-3 mr-1" /> Chat
                       </Button>
@@ -431,6 +399,12 @@ const MechanicDashboard = () => {
                   </Select></div>
                 <div><label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1"><Hash className="h-3 w-3" /> Pincode</label>
                   <Input value={editPincode} onChange={(e) => setEditPincode(e.target.value.replace(/\D/g, ""))} maxLength={6} className="bg-secondary border-0" /></div>
+                <div><label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1"><MapPin className="h-3 w-3" /> Garage Address <span className="text-destructive">*</span></label>
+                  <Textarea value={editAddress} onChange={(e) => setEditAddress(e.target.value)} placeholder="Full garage address" className="bg-secondary border-0 min-h-[60px]" /></div>
+                <div><label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1"><Link className="h-3 w-3" /> Google Maps Link</label>
+                  <Input value={editMapsLink} onChange={(e) => setEditMapsLink(e.target.value)} placeholder="https://maps.google.com/..." className="bg-secondary border-0" /></div>
+                <div><label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1"><Clock className="h-3 w-3" /> Years of Experience</label>
+                  <Input value={editExperience} onChange={(e) => setEditExperience(e.target.value.replace(/\D/g, ""))} placeholder="e.g. 5" maxLength={2} className="bg-secondary border-0" /></div>
 
                 <div className="bg-secondary rounded-lg p-3">
                   <div className="flex items-center gap-2">
