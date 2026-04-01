@@ -3,9 +3,6 @@ project_id = "kquafqdiylglfwolgovp"
 [functions.auth-pin]
 verify_jwt = false
 
-[functions.auth-email-otp]
-verify_jwt = false
-
 [functions.analyze-issue]
 verify_jwt = false
 
