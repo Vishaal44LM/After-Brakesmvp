@@ -331,6 +331,53 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicle_documents: {
+        Row: {
+          created_at: string | null
+          document_type: string
+          expiry_date: string | null
+          file_url: string
+          id: string
+          notes: string | null
+          title: string | null
+          updated_at: string | null
+          user_id: string
+          vehicle_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          document_type: string
+          expiry_date?: string | null
+          file_url: string
+          id?: string
+          notes?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id: string
+          vehicle_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          document_type?: string
+          expiry_date?: string | null
+          file_url?: string
+          id?: string
+          notes?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_documents_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vehicles: {
         Row: {
           created_at: string | null
