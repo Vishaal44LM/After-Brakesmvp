@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Car, MapPin, AlertTriangle, IndianRupee, MessageCircle, Send, Loader2,
-  Clock, Star, Edit2, Save, Camera, Store, Hash, User, Phone, Search, Link, FileCheck
+  Clock, Star, Edit2, Save, Camera, Store, User, Phone, Search, Link, FileCheck
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,7 +28,6 @@ const MechanicDashboard = () => {
   const [submittingResponse, setSubmittingResponse] = useState(false);
 
   const [searchArea, setSearchArea] = useState("");
-  const [searchPincode, setSearchPincode] = useState("");
 
   const [myResponses, setMyResponses] = useState<any[]>([]);
   const [loadingMyResponses, setLoadingMyResponses] = useState(false);
@@ -40,7 +39,6 @@ const MechanicDashboard = () => {
   const [editName, setEditName] = useState(mechanicProfile?.name || "");
   const [editGarageName, setEditGarageName] = useState(mechanicProfile?.garage_name || "");
   const [editArea, setEditArea] = useState(mechanicProfile?.area || "");
-  const [editPincode, setEditPincode] = useState(mechanicProfile?.pincode || "");
   const [editAddress, setEditAddress] = useState("");
   const [editMapsLink, setEditMapsLink] = useState("");
   const [editExperience, setEditExperience] = useState("");
@@ -53,9 +51,7 @@ const MechanicDashboard = () => {
       setEditName(mechanicProfile.name);
       setEditGarageName(mechanicProfile.garage_name);
       setEditArea(mechanicProfile.area);
-      setEditPincode(mechanicProfile.pincode);
       setGaragePhotoPreview(mechanicProfile.garage_photo_url);
-      // Load extended fields
       loadExtendedProfile();
     }
   }, [mechanicProfile]);
@@ -78,7 +74,7 @@ const MechanicDashboard = () => {
     }
   }, [user, mechanicProfile]);
 
-  const fetchNearbyIssues = async (overrideArea?: string, overridePincode?: string) => {
+  const fetchNearbyIssues = async (overrideArea?: string) => {
     if (!user) return;
     setLoadingIssues(true);
     try {
@@ -88,10 +84,7 @@ const MechanicDashboard = () => {
         .eq("status", "open")
         .order("created_at", { ascending: false });
 
-      const filterPincode = overridePincode || searchPincode || mechanicProfile?.pincode;
-      const filterArea = overrideArea || searchArea;
-
-      if (filterPincode) query = query.eq("pincode", filterPincode);
+      const filterArea = overrideArea || searchArea || mechanicProfile?.area;
       if (filterArea) query = query.eq("area", filterArea);
 
       const { data, error } = await query;
@@ -115,8 +108,8 @@ const MechanicDashboard = () => {
     }
   };
 
-  const handleSearch = () => fetchNearbyIssues(searchArea, searchPincode);
-  const handleResetSearch = () => { setSearchArea(""); setSearchPincode(""); fetchNearbyIssues("", ""); };
+  const handleSearch = () => fetchNearbyIssues(searchArea);
+  const handleResetSearch = () => { setSearchArea(""); fetchNearbyIssues(""); };
 
   const fetchMyResponses = async () => {
     if (!user) return;
@@ -185,7 +178,7 @@ const MechanicDashboard = () => {
   };
 
   const handleSaveProfile = async () => {
-    if (!editName.trim() || !editGarageName.trim() || !editArea || editPincode.length !== 6) {
+    if (!editName.trim() || !editGarageName.trim() || !editArea) {
       toast.error("Fill all fields correctly");
       return;
     }
@@ -205,14 +198,13 @@ const MechanicDashboard = () => {
         name: editName,
         garage_name: editGarageName,
         area: editArea,
-        pincode: editPincode,
         garage_photo_url: photoUrl,
         garage_address: editAddress,
         google_maps_link: editMapsLink || null,
         years_of_experience: parseInt(editExperience) || null,
       } as any).eq("user_id", user!.id);
 
-      await supabase.from("profiles").update({ name: editName, area: editArea, pincode: editPincode }).eq("user_id", user!.id);
+      await supabase.from("profiles").update({ name: editName, area: editArea }).eq("user_id", user!.id);
       await refreshProfile();
       toast.success("Profile updated!");
     } catch (e: any) {
@@ -242,7 +234,7 @@ const MechanicDashboard = () => {
           <TabsContent value="issues" className="space-y-3 mt-4">
             <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-primary" /> Nearby Issues
-              {mechanicProfile && <span className="text-xs text-muted-foreground font-normal">({mechanicProfile.pincode})</span>}
+              {mechanicProfile && <span className="text-xs text-muted-foreground font-normal">({mechanicProfile.area})</span>}
             </h2>
 
             <div className="bg-card rounded-xl border border-border p-4 space-y-3">
@@ -250,13 +242,10 @@ const MechanicDashboard = () => {
                 <Search className="h-4 w-4 text-primary" />
                 <span className="font-medium">Search Customers</span>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <Select value={searchArea} onValueChange={setSearchArea}>
-                  <SelectTrigger className="bg-secondary border-0 text-sm"><SelectValue placeholder="Filter by Area" /></SelectTrigger>
-                  <SelectContent>{chennaiAreas.map((a) => (<SelectItem key={a} value={a}>{a}</SelectItem>))}</SelectContent>
-                </Select>
-                <Input value={searchPincode} onChange={(e) => setSearchPincode(e.target.value.replace(/\D/g, ""))} placeholder="Pincode" maxLength={6} className="bg-secondary border-0 text-sm" />
-              </div>
+              <Select value={searchArea} onValueChange={setSearchArea}>
+                <SelectTrigger className="bg-secondary border-0 text-sm"><SelectValue placeholder="Filter by Area" /></SelectTrigger>
+                <SelectContent>{chennaiAreas.map((a) => (<SelectItem key={a} value={a}>{a}</SelectItem>))}</SelectContent>
+              </Select>
               <div className="flex gap-2">
                 <Button size="sm" onClick={handleSearch}><Search className="h-3 w-3 mr-1" /> Search</Button>
                 <Button size="sm" variant="outline" onClick={handleResetSearch}>Reset</Button>
@@ -279,7 +268,7 @@ const MechanicDashboard = () => {
                         {issue.vehicle ? `${issue.vehicle.vehicle_type} ${issue.vehicle.vehicle_brand || ""} ${issue.vehicle.vehicle_model || ""}` : "Vehicle"}
                       </h3>
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <MapPin className="h-3 w-3" /> {issue.area || "Unknown"} • {issue.pincode || ""}
+                        <MapPin className="h-3 w-3" /> {issue.area || "Unknown"}
                       </span>
                     </div>
                   </div>
@@ -397,8 +386,6 @@ const MechanicDashboard = () => {
                     <SelectTrigger className="bg-secondary border-0"><SelectValue /></SelectTrigger>
                     <SelectContent>{chennaiAreas.map((a) => (<SelectItem key={a} value={a}>{a}</SelectItem>))}</SelectContent>
                   </Select></div>
-                <div><label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1"><Hash className="h-3 w-3" /> Pincode</label>
-                  <Input value={editPincode} onChange={(e) => setEditPincode(e.target.value.replace(/\D/g, ""))} maxLength={6} className="bg-secondary border-0" /></div>
                 <div><label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1"><MapPin className="h-3 w-3" /> Garage Address <span className="text-destructive">*</span></label>
                   <Textarea value={editAddress} onChange={(e) => setEditAddress(e.target.value)} placeholder="Full garage address" className="bg-secondary border-0 min-h-[60px]" /></div>
                 <div><label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1"><Link className="h-3 w-3" /> Google Maps Link</label>

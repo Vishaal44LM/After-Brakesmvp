@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { chennaiAreas } from "@/data/chennaiAreas";
 import { toast } from "sonner";
-import { User, MapPin, Hash, Loader2, Car, ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { User, MapPin, Loader2, Car, ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -27,7 +27,6 @@ const UserSetup = () => {
   const { user, refreshProfile } = useAuth();
   const [name, setName] = useState("");
   const [area, setArea] = useState("");
-  const [pincode, setPincode] = useState("");
   const [loading, setLoading] = useState(false);
   const [vehicles, setVehicles] = useState<Vehicle[]>([
     { vehicle_type: "", vehicle_brand: "", vehicle_model: "", vehicle_year: "", fuel_type: "", transmission: "" },
@@ -49,7 +48,6 @@ const UserSetup = () => {
   const handleSubmit = async () => {
     if (!name.trim()) { toast.error("Enter your name"); return; }
     if (!area) { toast.error("Select your area"); return; }
-    if (pincode.length !== 6) { toast.error("Enter a valid 6-digit pincode"); return; }
     
     const validVehicles = vehicles.filter((v) => v.vehicle_type);
     if (validVehicles.length === 0) { toast.error("Add at least one vehicle"); return; }
@@ -58,14 +56,12 @@ const UserSetup = () => {
 
     setLoading(true);
     try {
-      // Update profile
       const { error: profileError } = await supabase
         .from("profiles")
-        .update({ name, area, pincode })
+        .update({ name, area })
         .eq("user_id", user.id);
       if (profileError) throw profileError;
 
-      // Insert vehicles
       const vehicleInserts = validVehicles.map((v) => ({
         user_id: user.id,
         vehicle_type: v.vehicle_type,
@@ -92,7 +88,7 @@ const UserSetup = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4 py-8">
       <div className="w-full max-w-md">
-        <button onClick={() => navigate("/role-select")} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors mb-4">
+        <button onClick={() => navigate("/")} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors mb-4">
           <ArrowLeft className="h-4 w-4" /> Back
         </button>
         <h1 className="font-brand text-2xl font-bold text-foreground mb-1 text-center">Set Up Your Profile</h1>
@@ -115,12 +111,6 @@ const UserSetup = () => {
                 {chennaiAreas.map((a) => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
               </SelectContent>
             </Select>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2">
-              <Hash className="h-4 w-4" /> Pincode
-            </label>
-            <Input value={pincode} onChange={(e) => setPincode(e.target.value.replace(/\D/g, ""))} placeholder="6-digit pincode" maxLength={6} className="bg-secondary border-0" />
           </div>
         </div>
 
