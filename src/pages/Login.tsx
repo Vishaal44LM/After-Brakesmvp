@@ -300,7 +300,7 @@ const Login = () => {
           )}
         </div>
 
-        <button onClick={() => navigate("/")} className="mt-8 flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
+        <button onClick={() => navigate("/", { replace: true })} className="mt-8 flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
           <ArrowLeft className="h-4 w-4" /> Back to Role Selection
         </button>
       </div>

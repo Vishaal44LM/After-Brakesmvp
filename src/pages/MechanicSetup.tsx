@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { chennaiAreas } from "@/data/chennaiAreas";
 import { toast } from "sonner";
-import { User, Store, MapPin, Hash, Camera, Loader2, ArrowLeft, FileCheck, Clock, Link } from "lucide-react";
+import { User, Store, MapPin, Camera, Loader2, ArrowLeft, FileCheck, Clock, Link } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -16,7 +16,6 @@ const MechanicSetup = () => {
   const [name, setName] = useState("");
   const [garageName, setGarageName] = useState("");
   const [area, setArea] = useState("");
-  const [pincode, setPincode] = useState("");
   const [garageAddress, setGarageAddress] = useState("");
   const [googleMapsLink, setGoogleMapsLink] = useState("");
   const [yearsOfExperience, setYearsOfExperience] = useState("");
@@ -50,7 +49,6 @@ const MechanicSetup = () => {
     if (!name.trim()) { toast.error("Enter your name"); return; }
     if (!garageName.trim()) { toast.error("Enter your garage name"); return; }
     if (!area) { toast.error("Select your area"); return; }
-    if (pincode.length !== 6) { toast.error("Enter a valid 6-digit pincode"); return; }
     if (!garageAddress.trim()) { toast.error("Enter your garage address"); return; }
     if (!idProofFile) { toast.error("Upload an ID proof"); return; }
     if (!yearsOfExperience) { toast.error("Enter years of experience"); return; }
@@ -72,7 +70,6 @@ const MechanicSetup = () => {
         garagePhotoUrl = urlData.publicUrl;
       }
 
-      // Upload ID proof
       const idExt = idProofFile.name.split(".").pop();
       const idPath = `${user.id}/id-proof.${idExt}`;
       const { error: idUploadError } = await supabase.storage
@@ -82,17 +79,15 @@ const MechanicSetup = () => {
       const { data: idUrlData } = supabase.storage.from("garage-photos").getPublicUrl(idPath);
       idProofUrl = idUrlData.publicUrl;
 
-      // Update profile
-      await supabase.from("profiles").update({ name, area, pincode }).eq("user_id", user.id);
+      await supabase.from("profiles").update({ name, area }).eq("user_id", user.id);
 
-      // Create mechanic profile
       const { error } = await supabase.from("mechanic_profiles").insert({
         user_id: user.id,
         name,
         garage_name: garageName,
         garage_photo_url: garagePhotoUrl,
         area,
-        pincode,
+        pincode: "000000",
         garage_address: garageAddress,
         google_maps_link: googleMapsLink || null,
         years_of_experience: parseInt(yearsOfExperience) || null,
@@ -114,7 +109,7 @@ const MechanicSetup = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4 py-8">
       <div className="w-full max-w-md">
-        <button onClick={() => navigate("/role-select")} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors mb-4">
+        <button onClick={() => navigate("/")} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors mb-4">
           <ArrowLeft className="h-4 w-4" /> Back
         </button>
         <h1 className="font-brand text-2xl font-bold text-foreground mb-1 text-center">Mechanic Profile</h1>
@@ -149,10 +144,6 @@ const MechanicSetup = () => {
               <SelectTrigger className="bg-secondary border-0"><SelectValue placeholder="Select area" /></SelectTrigger>
               <SelectContent>{chennaiAreas.map((a) => (<SelectItem key={a} value={a}>{a}</SelectItem>))}</SelectContent>
             </Select>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><Hash className="h-4 w-4" /> Pincode</label>
-            <Input value={pincode} onChange={(e) => setPincode(e.target.value.replace(/\D/g, ""))} placeholder="6-digit pincode" maxLength={6} className="bg-secondary border-0" />
           </div>
           <div>
             <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><MapPin className="h-4 w-4" /> Garage Address <span className="text-destructive">*</span></label>

@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Camera, Upload, Sparkles, Star, MapPin, MessageCircle, Clock, IndianRupee,
-  Loader2, Send, Bot, User, Check, Phone, Car, Edit2, Plus, Trash2, Save, Hash, Search, Wrench, Mic, MicOff, Volume2
+  Loader2, Send, Bot, User, Check, Phone, Car, Edit2, Plus, Trash2, Save, Search, Wrench, Mic, MicOff, Volume2,
+  FolderOpen, FileText, Shield, Leaf, CalendarDays
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,28 +20,79 @@ const vehicleTypes = ["Car", "Bike", "Scooter", "Auto", "Truck", "Bus", "Van"];
 const fuelTypes = ["Petrol", "Diesel", "Electric", "CNG", "Hybrid"];
 const transmissions = ["Manual", "Automatic", "CVT", "DCT", "AMT"];
 
-const FindMechanicSection = () => {
+const documentTypes = [
+  { value: "service_history", label: "Service History", icon: Wrench },
+  { value: "insurance", label: "Insurance", icon: Shield },
+  { value: "rc", label: "RC (Registration Certificate)", icon: FileText },
+  { value: "pollution_certificate", label: "Pollution Certificate", icon: Leaf },
+];
+
+// Find Mechanic Section with chat + issue submission
+const FindMechanicSection = ({ user, vehicles }: { user: any; vehicles: any[] }) => {
+  const navigate = useNavigate();
   const [searchArea, setSearchArea] = useState("");
-  const [searchPincode, setSearchPincode] = useState("");
   const [mechanics, setMechanics] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [contactingMechanic, setContactingMechanic] = useState<string | null>(null);
+  const [issueDesc, setIssueDesc] = useState("");
+  const [selectedVehicleId, setSelectedVehicleId] = useState("");
+  const [submittingIssue, setSubmittingIssue] = useState(false);
 
   const handleSearch = async () => {
-    if (!searchArea && !searchPincode) { toast.error("Enter area or pincode to search"); return; }
+    if (!searchArea) { toast.error("Select an area to search"); return; }
     setSearching(true);
     setSearched(true);
     try {
-      let query = supabase.from("mechanic_profiles").select("*");
-      if (searchArea) query = query.eq("area", searchArea);
-      if (searchPincode) query = query.eq("pincode", searchPincode);
-      const { data, error } = await query;
+      const { data, error } = await supabase.from("mechanic_profiles").select("*").eq("area", searchArea);
       if (error) throw error;
       setMechanics(data || []);
     } catch (e: any) {
       toast.error(e.message || "Search failed");
     } finally {
       setSearching(false);
+    }
+  };
+
+  const handleSubmitIssueToMechanic = async (mechanicId: string) => {
+    if (!issueDesc.trim()) { toast.error("Describe your issue"); return; }
+    if (!user) return;
+    setSubmittingIssue(true);
+    try {
+      const mechanic = mechanics.find((m: any) => m.user_id === mechanicId);
+      const { data: issue, error: issueErr } = await supabase.from("issues").insert({
+        user_id: user.id,
+        description: issueDesc,
+        vehicle_id: selectedVehicleId || null,
+        area: mechanic?.area || null,
+        status: "open",
+      }).select().single();
+      if (issueErr) throw issueErr;
+
+      // Send first message to establish chat
+      await supabase.from("messages").insert({
+        issue_id: issue.id,
+        sender_id: user.id,
+        content: issueDesc,
+      });
+
+      // Create a mechanic response so they can see it and chat
+      await supabase.from("mechanic_responses").insert({
+        issue_id: issue.id,
+        mechanic_id: mechanicId,
+        price_quote: 0,
+        message: "Customer contacted you directly",
+        status: "pending",
+      });
+
+      toast.success("Issue sent to mechanic! Opening chat...");
+      setContactingMechanic(null);
+      setIssueDesc("");
+      navigate(`/chat/${issue.id}`);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to send");
+    } finally {
+      setSubmittingIssue(false);
     }
   };
 
@@ -54,7 +106,6 @@ const FindMechanicSection = () => {
           <SelectTrigger className="bg-secondary border-0"><SelectValue placeholder="Select Area" /></SelectTrigger>
           <SelectContent>{chennaiAreas.map((a) => (<SelectItem key={a} value={a}>{a}</SelectItem>))}</SelectContent>
         </Select>
-        <Input value={searchPincode} onChange={(e) => setSearchPincode(e.target.value.replace(/\D/g, ""))} placeholder="Enter Pincode" maxLength={6} className="bg-secondary border-0" />
         <Button className="w-full" onClick={handleSearch} disabled={searching}>
           {searching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />} Search Mechanics
         </Button>
@@ -79,18 +130,45 @@ const FindMechanicSection = () => {
                   <p className="text-xs text-muted-foreground">{m.name}</p>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
                     <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{m.area}</span>
-                    <span className="flex items-center gap-1"><Hash className="h-3 w-3" />{m.pincode}</span>
                     <span className="flex items-center gap-1"><Star className="h-3 w-3 text-warning" />{m.rating ? `${Number(m.rating).toFixed(1)} (${m.total_ratings})` : "New"}</span>
                     {m.years_of_experience && <span className="text-xs">{m.years_of_experience} yrs exp</span>}
                   </div>
                   {m.garage_address && <p className="text-xs text-muted-foreground mt-0.5">{m.garage_address}</p>}
                 </div>
+              </div>
+              <div className="flex gap-2 mt-3">
+                <Button size="sm" variant="outline" onClick={() => setContactingMechanic(contactingMechanic === m.user_id ? null : m.user_id)}>
+                  <MessageCircle className="h-3 w-3 mr-1" /> Chat
+                </Button>
                 {m.google_maps_link && (
-                  <a href={m.google_maps_link} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                  <a href={m.google_maps_link} target="_blank" rel="noopener noreferrer">
                     <Button size="sm" variant="outline" className="text-xs"><MapPin className="h-3 w-3 mr-1" />Map</Button>
                   </a>
                 )}
               </div>
+
+              {contactingMechanic === m.user_id && (
+                <div className="mt-3 space-y-2 bg-card rounded-lg p-3 border border-border animate-fade-in">
+                  <p className="text-xs text-muted-foreground font-medium">Send your issue to {m.garage_name}</p>
+                  {vehicles.length > 0 && (
+                    <Select value={selectedVehicleId} onValueChange={setSelectedVehicleId}>
+                      <SelectTrigger className="bg-secondary border-0 text-sm"><SelectValue placeholder="Select Vehicle" /></SelectTrigger>
+                      <SelectContent>
+                        {vehicles.map((v: any) => (
+                          <SelectItem key={v.id} value={v.id}>{v.vehicle_type} {v.vehicle_brand} {v.vehicle_model}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  <Textarea value={issueDesc} onChange={(e) => setIssueDesc(e.target.value)} placeholder="Describe your vehicle issue..." className="bg-secondary border-0 min-h-[60px]" />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => handleSubmitIssueToMechanic(m.user_id)} disabled={submittingIssue}>
+                      {submittingIssue ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Send className="h-3 w-3 mr-1" />} Send & Chat
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setContactingMechanic(null)}>Cancel</Button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -138,7 +216,7 @@ const AIVoiceMechanic = ({ profile, vehicles }: { profile: any; vehicles: any[] 
       const { data, error } = await supabase.functions.invoke("ai-voice-mechanic", {
         body: {
           messages: newMessages,
-          userContext: { area: profile?.area, pincode: profile?.pincode, vehicles: vehicleInfo },
+          userContext: { area: profile?.area, vehicles: vehicleInfo },
         },
       });
 
@@ -275,6 +353,174 @@ const AIVoiceMechanic = ({ profile, vehicles }: { profile: any; vehicles: any[] 
   );
 };
 
+// Digital Garage Component
+const DigitalGarage = ({ user, vehicles }: { user: any; vehicles: any[] }) => {
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState("");
+  const [docType, setDocType] = useState("");
+  const [docTitle, setDocTitle] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+  const [docNotes, setDocNotes] = useState("");
+  const [docFile, setDocFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    if (user) fetchDocuments();
+  }, [user]);
+
+  const fetchDocuments = async () => {
+    const { data } = await supabase
+      .from("vehicle_documents")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+    setDocuments((data as any[]) || []);
+    setLoading(false);
+  };
+
+  const handleUpload = async () => {
+    if (!docFile) { toast.error("Select a file"); return; }
+    if (!docType) { toast.error("Select document type"); return; }
+    if (!selectedVehicle) { toast.error("Select a vehicle"); return; }
+
+    setUploading(true);
+    try {
+      const ext = docFile.name.split(".").pop();
+      const filePath = `${user.id}/${Date.now()}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from("issue-images").upload(filePath, docFile);
+      if (uploadErr) throw uploadErr;
+      const { data: urlData } = supabase.storage.from("issue-images").getPublicUrl(filePath);
+
+      const { error } = await supabase.from("vehicle_documents").insert({
+        user_id: user.id,
+        vehicle_id: selectedVehicle,
+        document_type: docType,
+        title: docTitle || documentTypes.find(d => d.value === docType)?.label || docType,
+        file_url: urlData.publicUrl,
+        expiry_date: expiryDate || null,
+        notes: docNotes || null,
+      } as any);
+      if (error) throw error;
+
+      toast.success("Document uploaded!");
+      setDocFile(null);
+      setDocType("");
+      setDocTitle("");
+      setExpiryDate("");
+      setDocNotes("");
+      setSelectedVehicle("");
+      fetchDocuments();
+    } catch (e: any) {
+      toast.error(e.message || "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDelete = async (docId: string) => {
+    await supabase.from("vehicle_documents").delete().eq("id", docId);
+    fetchDocuments();
+    toast.success("Document removed");
+  };
+
+  const getVehicleLabel = (vehicleId: string) => {
+    const v = vehicles.find((v: any) => v.id === vehicleId);
+    return v ? `${v.vehicle_type} ${v.vehicle_brand || ""} ${v.vehicle_model || ""}`.trim() : "Vehicle";
+  };
+
+  const getDocIcon = (type: string) => {
+    const dt = documentTypes.find(d => d.value === type);
+    return dt ? dt.icon : FileText;
+  };
+
+  return (
+    <section className="space-y-4">
+      <div className="bg-card rounded-xl border border-border p-5 animate-slide-up">
+        <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+          <FolderOpen className="h-5 w-5 text-primary" /> Digital Garage
+        </h2>
+        <p className="text-xs text-muted-foreground mb-4">Store service history, insurance, RC & pollution certificates. Valuable when selling your vehicle.</p>
+
+        <div className="space-y-3">
+          <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
+            <SelectTrigger className="bg-secondary border-0"><SelectValue placeholder="Select Vehicle" /></SelectTrigger>
+            <SelectContent>
+              {vehicles.map((v: any) => (
+                <SelectItem key={v.id} value={v.id}>{v.vehicle_type} {v.vehicle_brand} {v.vehicle_model}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={docType} onValueChange={setDocType}>
+            <SelectTrigger className="bg-secondary border-0"><SelectValue placeholder="Document Type" /></SelectTrigger>
+            <SelectContent>
+              {documentTypes.map((d) => (
+                <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Input value={docTitle} onChange={(e) => setDocTitle(e.target.value)} placeholder="Title (optional)" className="bg-secondary border-0" />
+          <Input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} className="bg-secondary border-0" placeholder="Expiry Date (optional)" />
+          <Input value={docNotes} onChange={(e) => setDocNotes(e.target.value)} placeholder="Notes (optional)" className="bg-secondary border-0" />
+
+          <label className="cursor-pointer block">
+            <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-secondary text-muted-foreground text-sm hover:text-primary transition-colors border border-dashed border-border">
+              <Upload className="h-4 w-4" /> {docFile ? docFile.name : "Choose file (PDF, Image, etc.)"}
+            </div>
+            <input type="file" accept="image/*,.pdf,.doc,.docx" className="hidden" onChange={(e) => setDocFile(e.target.files?.[0] || null)} />
+          </label>
+
+          <Button className="w-full" onClick={handleUpload} disabled={uploading}>
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />} Upload Document
+          </Button>
+        </div>
+      </div>
+
+      {/* Documents List */}
+      {loading ? (
+        <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+      ) : documents.length === 0 ? (
+        <div className="text-center text-muted-foreground text-sm py-6">No documents uploaded yet.</div>
+      ) : (
+        <div className="space-y-2">
+          {documents.map((doc: any) => {
+            const DocIcon = getDocIcon(doc.document_type);
+            return (
+              <div key={doc.id} className="bg-card rounded-xl border border-border p-4 flex items-center gap-3 animate-slide-up">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <DocIcon className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{doc.title || doc.document_type}</p>
+                  <p className="text-xs text-muted-foreground">{getVehicleLabel(doc.vehicle_id)}</p>
+                  <div className="flex gap-3 text-xs text-muted-foreground mt-0.5">
+                    {doc.expiry_date && (
+                      <span className="flex items-center gap-1">
+                        <CalendarDays className="h-3 w-3" /> Exp: {new Date(doc.expiry_date).toLocaleDateString()}
+                      </span>
+                    )}
+                    <span>{new Date(doc.created_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                    <Button size="sm" variant="outline" className="text-xs">View</Button>
+                  </a>
+                  <button onClick={() => handleDelete(doc.id)} className="text-destructive hover:text-destructive/80 p-1">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+};
+
 const UserDashboard = () => {
   const navigate = useNavigate();
   const { user, profile, signOut, refreshProfile } = useAuth();
@@ -306,7 +552,6 @@ const UserDashboard = () => {
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [editName, setEditName] = useState(profile?.name || "");
   const [editArea, setEditArea] = useState(profile?.area || "");
-  const [editPincode, setEditPincode] = useState(profile?.pincode || "");
   const [savingProfile, setSavingProfile] = useState(false);
   const [newVehicle, setNewVehicle] = useState({ vehicle_type: "", vehicle_brand: "", vehicle_model: "", vehicle_year: "", fuel_type: "", transmission: "" });
   const [addingVehicle, setAddingVehicle] = useState(false);
@@ -315,7 +560,6 @@ const UserDashboard = () => {
     if (profile) {
       setEditName(profile.name || "");
       setEditArea(profile.area || "");
-      setEditPincode(profile.pincode || "");
     }
   }, [profile]);
 
@@ -409,7 +653,6 @@ const UserDashboard = () => {
         image_url: imageUrl,
         vehicle_id: selectedVehicle || null,
         area: profile?.area || null,
-        pincode: profile?.pincode || null,
         status: "open",
       }).select().single();
       if (issueError) throw issueError;
@@ -463,7 +706,7 @@ const UserDashboard = () => {
         },
         body: JSON.stringify({
           messages: allMsgs,
-          userContext: { area: profile?.area, pincode: profile?.pincode, vehicles: vehicleInfo },
+          userContext: { area: profile?.area, vehicles: vehicleInfo },
         }),
       });
 
@@ -548,10 +791,9 @@ const UserDashboard = () => {
   const handleSaveProfile = async () => {
     if (!editName.trim()) { toast.error("Name required"); return; }
     if (!editArea) { toast.error("Area required"); return; }
-    if (editPincode.length !== 6) { toast.error("Valid pincode required"); return; }
     setSavingProfile(true);
     try {
-      await supabase.from("profiles").update({ name: editName, area: editArea, pincode: editPincode }).eq("user_id", user!.id);
+      await supabase.from("profiles").update({ name: editName, area: editArea }).eq("user_id", user!.id);
       await refreshProfile();
       toast.success("Profile updated!");
     } catch (e: any) {
@@ -600,11 +842,12 @@ const UserDashboard = () => {
       <Navbar role="user" onLogout={handleLogout} />
       <div className="container max-w-2xl py-4 px-4">
         <Tabs defaultValue="report" className="w-full">
-          <TabsList className="grid w-full grid-cols-5 bg-secondary">
+          <TabsList className="grid w-full grid-cols-6 bg-secondary">
             <TabsTrigger value="report" className="text-xs">Report</TabsTrigger>
             <TabsTrigger value="ai" className="text-xs">AI</TabsTrigger>
-            <TabsTrigger value="responses" className="text-xs">Responses</TabsTrigger>
+            <TabsTrigger value="responses" className="text-xs">Quotes</TabsTrigger>
             <TabsTrigger value="find-mechanic" className="text-xs">Find</TabsTrigger>
+            <TabsTrigger value="garage" className="text-xs">Garage</TabsTrigger>
             <TabsTrigger value="profile" className="text-xs">Profile</TabsTrigger>
           </TabsList>
 
@@ -696,23 +939,13 @@ const UserDashboard = () => {
             )}
           </TabsContent>
 
-          {/* AI TAB - with sub-options */}
+          {/* AI TAB */}
           <TabsContent value="ai" className="mt-4 space-y-4">
             <div className="flex gap-2 mb-2">
-              <Button
-                size="sm"
-                variant={aiMode === "chat" ? "default" : "outline"}
-                onClick={() => setAiMode("chat")}
-                className="flex-1"
-              >
+              <Button size="sm" variant={aiMode === "chat" ? "default" : "outline"} onClick={() => setAiMode("chat")} className="flex-1">
                 <Bot className="h-4 w-4 mr-1" /> AI Chat
               </Button>
-              <Button
-                size="sm"
-                variant={aiMode === "voice" ? "default" : "outline"}
-                onClick={() => setAiMode("voice")}
-                className="flex-1"
-              >
+              <Button size="sm" variant={aiMode === "voice" ? "default" : "outline"} onClick={() => setAiMode("voice")} className="flex-1">
                 <Mic className="h-4 w-4 mr-1" /> AI Voice Mechanic
               </Button>
             </div>
@@ -821,7 +1054,12 @@ const UserDashboard = () => {
 
           {/* FIND MECHANIC TAB */}
           <TabsContent value="find-mechanic" className="space-y-4 mt-4">
-            <FindMechanicSection />
+            <FindMechanicSection user={user} vehicles={vehicles} />
+          </TabsContent>
+
+          {/* DIGITAL GARAGE TAB */}
+          <TabsContent value="garage" className="space-y-4 mt-4">
+            {user && <DigitalGarage user={user} vehicles={vehicles} />}
           </TabsContent>
 
           {/* PROFILE TAB */}
@@ -836,8 +1074,6 @@ const UserDashboard = () => {
                     <SelectTrigger className="bg-secondary border-0"><SelectValue /></SelectTrigger>
                     <SelectContent>{chennaiAreas.map((a) => (<SelectItem key={a} value={a}>{a}</SelectItem>))}</SelectContent>
                   </Select></div>
-                <div><label className="text-xs text-muted-foreground mb-1 block">Pincode</label>
-                  <Input value={editPincode} onChange={(e) => setEditPincode(e.target.value.replace(/\D/g, ""))} maxLength={6} className="bg-secondary border-0" /></div>
                 <Button onClick={handleSaveProfile} disabled={savingProfile}>
                   {savingProfile ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />} Save
                 </Button>
