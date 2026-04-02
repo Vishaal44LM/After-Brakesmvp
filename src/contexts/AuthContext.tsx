@@ -17,7 +17,6 @@ interface MechanicProfile {
   garage_name: string;
   garage_photo_url: string | null;
   area: string;
-  pincode: string;
   rating: number | null;
   total_ratings: number | null;
 }
