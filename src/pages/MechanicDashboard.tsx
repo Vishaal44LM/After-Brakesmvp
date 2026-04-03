@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,57 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Car, MapPin, AlertTriangle, IndianRupee, MessageCircle, Send, Loader2,
-  Clock, Star, Edit2, Save, Camera, Store, User, Phone, Search, Link, FileCheck
+  Clock, Star, Edit2, Save, Camera, Store, User, Phone, Search, Link, FileCheck, Mic, MicOff
 } from "lucide-react";
+
+// Voice-to-text button component (Tamil + English)
+const VoiceToTextButton = ({ onResult }: { onResult: (text: string) => void }) => {
+  const [listening, setListening] = useState(false);
+  const [lang, setLang] = useState<"en-IN" | "ta-IN">("en-IN");
+  const recRef = useRef<any>(null);
+
+  const toggle = () => {
+    if (listening) {
+      recRef.current?.stop();
+      setListening(false);
+      return;
+    }
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) { toast.error("Speech recognition not supported. Use Chrome."); return; }
+    const rec = new SR();
+    rec.continuous = false;
+    rec.interimResults = false;
+    rec.lang = lang;
+    rec.onstart = () => setListening(true);
+    rec.onresult = (e: any) => {
+      const text = e.results[0][0].transcript;
+      onResult(text);
+    };
+    rec.onerror = () => setListening(false);
+    rec.onend = () => setListening(false);
+    recRef.current = rec;
+    rec.start();
+  };
+
+  return (
+    <div className="absolute right-1 bottom-1 flex items-center gap-1">
+      <button
+        type="button"
+        onClick={() => setLang(l => l === "en-IN" ? "ta-IN" : "en-IN")}
+        className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground hover:text-primary"
+      >
+        {lang === "en-IN" ? "EN" : "தமிழ்"}
+      </button>
+      <button
+        type="button"
+        onClick={toggle}
+        className={`p-1.5 rounded-full transition-colors ${listening ? "bg-destructive text-destructive-foreground animate-pulse" : "bg-primary/10 text-primary hover:bg-primary/20"}`}
+      >
+        {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+      </button>
+    </div>
+  );
+};
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -305,7 +354,10 @@ const MechanicDashboard = () => {
                       </div>
                       <div>
                         <label className="text-xs text-muted-foreground mb-1 block">Message (optional)</label>
-                        <Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Add details..." className="bg-card border-0 min-h-[60px]" />
+                        <div className="relative">
+                          <Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Add details..." className="bg-card border-0 min-h-[60px] pr-10" />
+                          <VoiceToTextButton onResult={(text) => setMessage(prev => prev ? prev + " " + text : text)} />
+                        </div>
                       </div>
                       <div className="flex gap-2">
                         <Button size="sm" onClick={() => handleSubmitResponse(issue.id)} disabled={submittingResponse}>
