@@ -195,15 +195,30 @@ const AIVoiceMechanic = ({ profile, vehicles }: { profile: any; vehicles: any[] 
 
   const speak = useCallback((text: string) => {
     synthRef.current.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.95;
+    // Clean text: remove punctuation that TTS reads literally (e.g. "question mark")
+    const cleanedText = text
+      .replace(/[?!.,;:'"()\-]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    
+    const utterance = new SpeechSynthesisUtterance(cleanedText);
+    utterance.rate = 0.9;
     utterance.pitch = 1;
-    utterance.lang = voiceLang === "ta" ? "ta-IN" : "en-IN";
+    const lang = voiceLang === "ta" ? "ta-IN" : "en-IN";
+    utterance.lang = lang;
+    
+    // Try to find a matching voice for the language
+    const voices = synthRef.current.getVoices();
+    const matchingVoice = voices.find(v => v.lang === lang) || voices.find(v => v.lang.startsWith(voiceLang === "ta" ? "ta" : "en"));
+    if (matchingVoice) {
+      utterance.voice = matchingVoice;
+    }
+    
     setIsSpeaking(true);
     utterance.onend = () => setIsSpeaking(false);
     utterance.onerror = () => setIsSpeaking(false);
     synthRef.current.speak(utterance);
-  }, []);
+  }, [voiceLang]);
 
   const sendToAI = useCallback(async (userText: string) => {
     const userMsg = { role: "user" as const, content: userText };
