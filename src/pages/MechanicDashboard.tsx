@@ -305,7 +305,10 @@ const MechanicDashboard = () => {
                       </div>
                       <div>
                         <label className="text-xs text-muted-foreground mb-1 block">Message (optional)</label>
-                        <Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Add details..." className="bg-card border-0 min-h-[60px]" />
+                        <div className="relative">
+                          <Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Add details..." className="bg-card border-0 min-h-[60px] pr-10" />
+                          <VoiceToTextButton onResult={(text) => setMessage(prev => prev ? prev + " " + text : text)} />
+                        </div>
                       </div>
                       <div className="flex gap-2">
                         <Button size="sm" onClick={() => handleSubmitResponse(issue.id)} disabled={submittingResponse}>
