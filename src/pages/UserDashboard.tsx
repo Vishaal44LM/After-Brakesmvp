@@ -350,6 +350,12 @@ const AIVoiceMechanic = ({ profile, vehicles }: { profile: any; vehicles: any[] 
         <p className="text-xs text-muted-foreground">
           {isListening ? "Listening... Tap to stop" : isProcessing ? "Processing..." : "Tap to speak"}
         </p>
+        <button
+          onClick={() => setVoiceLang(l => l === "en" ? "ta" : "en")}
+          className="text-xs px-3 py-1 rounded-full bg-secondary text-muted-foreground hover:text-primary transition-colors"
+        >
+          {voiceLang === "en" ? "🇬🇧 English" : "🇮🇳 தமிழ்"}
+        </button>
       </div>
     </section>
   );
