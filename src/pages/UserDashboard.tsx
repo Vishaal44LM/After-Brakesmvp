@@ -245,7 +245,7 @@ const AIVoiceMechanic = ({ profile, vehicles }: { profile: any; vehicles: any[] 
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = true;
-    recognition.lang = "en-IN";
+    recognition.lang = voiceLang === "ta" ? "ta-IN" : "en-IN";
 
     recognition.onstart = () => setIsListening(true);
     recognition.onresult = (event: any) => {
