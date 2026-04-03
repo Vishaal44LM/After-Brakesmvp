@@ -981,7 +981,15 @@ const UserDashboard = () => {
                     </div>
                   ))}
                   {chatLoading && chatMessages[chatMessages.length - 1]?.role !== "assistant" && (
-                    <div className="flex justify-start"><div className="bg-secondary rounded-xl px-4 py-2.5"><Loader2 className="h-4 w-4 animate-spin text-primary" /></div></div>
+                    <div className="flex justify-start">
+                      <div className="bg-secondary rounded-xl px-4 py-2.5 flex items-center gap-1">
+                        <span className="text-lg animate-pulse">🚗</span>
+                        <span className="text-sm opacity-40 animate-pulse" style={{ animationDelay: "0.2s" }}>💨</span>
+                        <span className="text-sm opacity-25 animate-pulse" style={{ animationDelay: "0.4s" }}>💨</span>
+                        <span className="text-sm opacity-15 animate-pulse" style={{ animationDelay: "0.6s" }}>💨</span>
+                      </div>
+                    </div>
+                  )}
                   )}
                   <div ref={chatEndRef} />
                 </div>
