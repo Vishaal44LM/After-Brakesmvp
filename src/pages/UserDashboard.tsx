@@ -184,6 +184,7 @@ const AIVoiceMechanic = ({ profile, vehicles }: { profile: any; vehicles: any[] 
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [transcript, setTranscript] = useState("");
+  const [voiceLang, setVoiceLang] = useState<"en" | "ta">("en");
   const recognitionRef = useRef<any>(null);
   const synthRef = useRef(window.speechSynthesis);
   const chatEndRef = useRef<HTMLDivElement>(null);
