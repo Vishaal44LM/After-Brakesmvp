@@ -184,7 +184,6 @@ const AIVoiceMechanic = ({ profile, vehicles }: { profile: any; vehicles: any[] 
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [transcript, setTranscript] = useState("");
-  const [voiceLang, setVoiceLang] = useState<"en" | "ta">("en");
   const recognitionRef = useRef<any>(null);
   const synthRef = useRef(window.speechSynthesis);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -195,30 +194,15 @@ const AIVoiceMechanic = ({ profile, vehicles }: { profile: any; vehicles: any[] 
 
   const speak = useCallback((text: string) => {
     synthRef.current.cancel();
-    // Clean text: remove punctuation that TTS reads literally (e.g. "question mark")
-    const cleanedText = text
-      .replace(/[?!.,;:'"()\-]/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-    
-    const utterance = new SpeechSynthesisUtterance(cleanedText);
-    utterance.rate = 0.9;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.95;
     utterance.pitch = 1;
-    const lang = voiceLang === "ta" ? "ta-IN" : "en-IN";
-    utterance.lang = lang;
-    
-    // Try to find a matching voice for the language
-    const voices = synthRef.current.getVoices();
-    const matchingVoice = voices.find(v => v.lang === lang) || voices.find(v => v.lang.startsWith(voiceLang === "ta" ? "ta" : "en"));
-    if (matchingVoice) {
-      utterance.voice = matchingVoice;
-    }
-    
+    utterance.lang = "en-IN";
     setIsSpeaking(true);
     utterance.onend = () => setIsSpeaking(false);
     utterance.onerror = () => setIsSpeaking(false);
     synthRef.current.speak(utterance);
-  }, [voiceLang]);
+  }, []);
 
   const sendToAI = useCallback(async (userText: string) => {
     const userMsg = { role: "user" as const, content: userText };
@@ -233,7 +217,6 @@ const AIVoiceMechanic = ({ profile, vehicles }: { profile: any; vehicles: any[] 
         body: {
           messages: newMessages,
           userContext: { area: profile?.area, vehicles: vehicleInfo },
-          language: voiceLang,
         },
       });
 
@@ -260,7 +243,7 @@ const AIVoiceMechanic = ({ profile, vehicles }: { profile: any; vehicles: any[] 
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = true;
-    recognition.lang = voiceLang === "ta" ? "ta-IN" : "en-IN";
+    recognition.lang = "en-IN";
 
     recognition.onstart = () => setIsListening(true);
     recognition.onresult = (event: any) => {
@@ -365,12 +348,6 @@ const AIVoiceMechanic = ({ profile, vehicles }: { profile: any; vehicles: any[] 
         <p className="text-xs text-muted-foreground">
           {isListening ? "Listening... Tap to stop" : isProcessing ? "Processing..." : "Tap to speak"}
         </p>
-        <button
-          onClick={() => setVoiceLang(l => l === "en" ? "ta" : "en")}
-          className="text-xs px-3 py-1 rounded-full bg-secondary text-muted-foreground hover:text-primary transition-colors"
-        >
-          {voiceLang === "en" ? "🇬🇧 English" : "🇮🇳 தமிழ்"}
-        </button>
       </div>
     </section>
   );
@@ -996,14 +973,7 @@ const UserDashboard = () => {
                     </div>
                   ))}
                   {chatLoading && chatMessages[chatMessages.length - 1]?.role !== "assistant" && (
-                    <div className="flex justify-start">
-                      <div className="bg-secondary rounded-xl px-4 py-2.5 flex items-center gap-1">
-                        <span className="text-lg animate-pulse">🚗</span>
-                        <span className="text-sm opacity-40 animate-pulse" style={{ animationDelay: "0.2s" }}>💨</span>
-                        <span className="text-sm opacity-25 animate-pulse" style={{ animationDelay: "0.4s" }}>💨</span>
-                        <span className="text-sm opacity-15 animate-pulse" style={{ animationDelay: "0.6s" }}>💨</span>
-                      </div>
-                    </div>
+                    <div className="flex justify-start"><div className="bg-secondary rounded-xl px-4 py-2.5"><Loader2 className="h-4 w-4 animate-spin text-primary" /></div></div>
                   )}
                   <div ref={chatEndRef} />
                 </div>

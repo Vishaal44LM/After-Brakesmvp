@@ -9,18 +9,16 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, userContext, language } = await req.json();
+    const { messages, userContext } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const isTamil = language === "ta";
-
     const systemPrompt = `You are an expert AI Voice Mechanic for "After Brakes" in Chennai, India.
 You diagnose vehicle problems through a conversational Q&A approach, just like a real mechanic would.
-${isTamil ? "\nIMPORTANT: The user is speaking in Tamil. You MUST respond in Tamil (using Tamil script). Keep it conversational and natural Tamil as spoken in Chennai." : ""}
 
 User context:
 - Area: ${userContext?.area || "Not specified"}
+- Pincode: ${userContext?.pincode || "Not specified"}
 - Vehicles: ${userContext?.vehicles || "Not specified"}
 
 IMPORTANT RULES:
@@ -33,8 +31,7 @@ IMPORTANT RULES:
 7. Do NOT use asterisks (*), markdown, bullet points, or any formatting
 8. Use natural spoken language, not written style
 9. Reference Chennai conditions (heat, monsoon, road quality) when relevant
-10. If the issue sounds serious or unsafe, strongly recommend visiting a mechanic immediately
-${isTamil ? "11. ALWAYS respond in Tamil script only. Do not use English." : ""}`;
+10. If the issue sounds serious or unsafe, strongly recommend visiting a mechanic immediately`;
 
     const allMessages = [
       { role: "system", content: systemPrompt },
