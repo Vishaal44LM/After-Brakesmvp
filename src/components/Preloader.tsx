@@ -37,11 +37,38 @@ const Preloader = ({ onComplete }: { onComplete: () => void }) => {
       <p className="text-muted-foreground text-sm md:text-base animate-fade-in" style={{ animationDelay: "0.3s" }}>
         Right Mechanic. Right Time.
       </p>
-      <div className="mt-8 w-48 h-1 rounded-full bg-secondary overflow-hidden">
+      {/* Road with car driving */}
+      <div className="mt-8 w-64 relative">
+        {/* Road */}
+        <div className="w-full h-3 rounded-full bg-secondary overflow-hidden relative">
+          {/* Road markings */}
+          <div className="absolute inset-0 flex items-center justify-around">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="w-3 h-[2px] bg-muted-foreground/20 rounded" />
+            ))}
+          </div>
+          {/* Progress fill */}
+          <div
+            className="h-full bg-primary/30 rounded-full transition-all duration-100 ease-out absolute left-0 top-0"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        {/* Car emoji driving on the road */}
         <div
-          className="h-full bg-primary rounded-full transition-all duration-100 ease-out"
-          style={{ width: `${progress}%` }}
-        />
+          className="absolute -top-5 transition-all duration-100 ease-out"
+          style={{ left: `calc(${progress}% - 12px)` }}
+        >
+          <span className="text-2xl" role="img" aria-label="car">🚗</span>
+        </div>
+        {/* Exhaust smoke behind car */}
+        {progress > 5 && progress < 100 && (
+          <div
+            className="absolute -top-3 transition-all duration-100"
+            style={{ left: `calc(${progress}% - 28px)` }}
+          >
+            <span className="text-xs opacity-40">💨</span>
+          </div>
+        )}
       </div>
     </div>
   );
