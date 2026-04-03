@@ -198,7 +198,7 @@ const AIVoiceMechanic = ({ profile, vehicles }: { profile: any; vehicles: any[] 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.95;
     utterance.pitch = 1;
-    utterance.lang = "en-IN";
+    utterance.lang = voiceLang === "ta" ? "ta-IN" : "en-IN";
     setIsSpeaking(true);
     utterance.onend = () => setIsSpeaking(false);
     utterance.onerror = () => setIsSpeaking(false);
