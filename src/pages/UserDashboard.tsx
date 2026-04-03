@@ -989,8 +989,7 @@ const UserDashboard = () => {
                         <span className="text-sm opacity-15 animate-pulse" style={{ animationDelay: "0.6s" }}>💨</span>
                       </div>
                     </div>
-                  )}
-                  )}
+                  )
                   <div ref={chatEndRef} />
                 </div>
                 <div className="p-3 border-t border-border flex gap-2">
