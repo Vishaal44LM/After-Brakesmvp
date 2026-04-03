@@ -218,6 +218,7 @@ const AIVoiceMechanic = ({ profile, vehicles }: { profile: any; vehicles: any[] 
         body: {
           messages: newMessages,
           userContext: { area: profile?.area, vehicles: vehicleInfo },
+          language: voiceLang,
         },
       });
 
