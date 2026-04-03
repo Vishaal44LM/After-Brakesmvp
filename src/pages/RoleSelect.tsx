@@ -1,27 +1,31 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Car, Wrench } from "lucide-react";
+import { Car, Wrench, ArrowRight } from "lucide-react";
 import logo from "@/assets/logo.png";
+import { Button } from "@/components/ui/button";
 
 const roles = [
   {
     id: "user" as const,
     icon: Car,
-    title: "I Need Vehicle Service",
-    description: "Find trusted mechanics near you with AI-powered diagnostics",
+    title: "Vehicle Owner",
+    description: "Find trusted mechanics near you",
   },
   {
     id: "mechanic" as const,
     icon: Wrench,
-    title: "I Am a Mechanic / Garage Owner",
-    description: "Get connected with customers and grow your business",
+    title: "Mechanic / Garage",
+    description: "Connect with customers & grow",
   },
 ];
 
 const RoleSelect = () => {
   const navigate = useNavigate();
+  const [selected, setSelected] = useState<"user" | "mechanic" | null>(null);
 
-  const handleSelectRole = (roleId: "user" | "mechanic") => {
-    localStorage.setItem("afterbrakes_selected_role", roleId);
+  const handleContinue = () => {
+    if (!selected) return;
+    localStorage.setItem("afterbrakes_selected_role", selected);
     navigate("/login");
   };
 
@@ -33,22 +37,53 @@ const RoleSelect = () => {
       </h1>
       <p className="text-muted-foreground text-sm mb-10">Choose your role to get started</p>
 
-      <div className="flex flex-col sm:flex-row gap-4 w-full max-w-lg">
-        {roles.map((role, i) => (
-          <button
-            key={role.id}
-            onClick={() => handleSelectRole(role.id)}
-            className="flex-1 bg-card border border-border rounded-xl p-6 flex flex-col items-center gap-4 hover:border-primary hover:glow-primary transition-all duration-300 group animate-slide-up"
-            style={{ animationDelay: `${i * 0.15}s` }}
-          >
-            <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-              <role.icon className="h-7 w-7 text-primary" />
-            </div>
-            <h2 className="text-foreground font-semibold text-lg">{role.title}</h2>
-            <p className="text-muted-foreground text-sm text-center">{role.description}</p>
-          </button>
-        ))}
+      <div className="relative flex w-full max-w-sm bg-secondary rounded-full p-1 mb-8 animate-slide-up">
+        {/* Sliding highlight */}
+        <div
+          className="absolute top-1 bottom-1 rounded-full bg-primary transition-all duration-300 ease-in-out glow-primary"
+          style={{
+            width: "calc(50% - 4px)",
+            left: selected === "mechanic" ? "calc(50% + 2px)" : "4px",
+            opacity: selected ? 1 : 0,
+          }}
+        />
+
+        {roles.map((role) => {
+          const isActive = selected === role.id;
+          return (
+            <button
+              key={role.id}
+              onClick={() => setSelected(role.id)}
+              className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-full text-sm font-medium transition-colors duration-300 ${
+                isActive ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <role.icon className="h-4 w-4" />
+              <span>{role.title}</span>
+            </button>
+          );
+        })}
       </div>
+
+      {/* Description card */}
+      <div
+        className={`text-center mb-8 transition-all duration-300 ${
+          selected ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+        }`}
+      >
+        <p className="text-muted-foreground text-sm">
+          {selected ? roles.find((r) => r.id === selected)?.description : ""}
+        </p>
+      </div>
+
+      <Button
+        onClick={handleContinue}
+        disabled={!selected}
+        className="rounded-full px-8 gap-2 transition-all duration-300"
+        size="lg"
+      >
+        Continue <ArrowRight className="h-4 w-4" />
+      </Button>
     </div>
   );
 };
