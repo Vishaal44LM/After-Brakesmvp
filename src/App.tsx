@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import AuthCallback from "./pages/AuthCallback";
 import UserSetup from "./pages/UserSetup";
 import MechanicSetup from "./pages/MechanicSetup";
 import UserDashboard from "./pages/UserDashboard";
@@ -25,6 +26,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/setup/user" element={<UserSetup />} />
             <Route path="/setup/mechanic" element={<MechanicSetup />} />
             <Route path="/dashboard" element={<UserDashboard />} />
