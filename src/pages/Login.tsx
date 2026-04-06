@@ -1,12 +1,14 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mail, ArrowRight, ArrowLeft, Loader2, Lock, UserPlus, LogIn } from "lucide-react";
+import { Mail, ArrowLeft, Loader2, UserPlus, LogIn, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+
+const PREVIEW_APP_URL = "https://id-preview--562d32da-d46b-4fe8-a88f-b0d51e71002c.lovable.app";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -16,13 +18,21 @@ const Login = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
 
   const selectedRole = localStorage.getItem("afterbrakes_selected_role") as "user" | "mechanic" | null;
 
-  // Redirect if already logged in
+  const appBaseUrl = useMemo(() => {
+    if (typeof window === "undefined") return PREVIEW_APP_URL;
+
+    const { origin, hostname } = window.location;
+    return hostname.endsWith(".lovableproject.com") ? PREVIEW_APP_URL : origin;
+  }, []);
+
   useEffect(() => {
     if (authLoading) return;
+
     if (user && role) {
       if (role === "user") {
         navigate(profile?.name ? "/dashboard" : "/setup/user", { replace: true });
@@ -32,10 +42,23 @@ const Login = () => {
     }
   }, [user, role, profile, mechanicProfile, authLoading, navigate]);
 
+  const verificationRedirectUrl = `${appBaseUrl}/auth/callback`;
+
   const handleSignup = async () => {
-    if (!email.trim()) { toast.error("Enter your email"); return; }
-    if (password.length < 6) { toast.error("Password must be at least 6 characters"); return; }
-    if (password !== confirmPassword) { toast.error("Passwords don't match"); return; }
+    if (!email.trim()) {
+      toast.error("Enter your email");
+      return;
+    }
+
+    if (password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast.error("Passwords don't match");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -43,9 +66,10 @@ const Login = () => {
         email: email.trim(),
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: verificationRedirectUrl,
         },
       });
+
       if (error) throw error;
 
       setEmailSent(true);
@@ -57,9 +81,41 @@ const Login = () => {
     }
   };
 
+  const handleResendVerification = async () => {
+    if (!email.trim()) {
+      toast.error("Enter your email first");
+      return;
+    }
+
+    setResending(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: email.trim(),
+        options: {
+          emailRedirectTo: verificationRedirectUrl,
+        },
+      });
+
+      if (error) throw error;
+      toast.success("Verification email sent again.");
+    } catch (e: any) {
+      toast.error(e.message || "Couldn't resend verification email");
+    } finally {
+      setResending(false);
+    }
+  };
+
   const handleLogin = async () => {
-    if (!email.trim()) { toast.error("Enter your email"); return; }
-    if (!password) { toast.error("Enter your password"); return; }
+    if (!email.trim()) {
+      toast.error("Enter your email");
+      return;
+    }
+
+    if (!password) {
+      toast.error("Enter your password");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -70,27 +126,24 @@ const Login = () => {
       if (error) throw error;
 
       const userId = data.user.id;
-
-      // Check role
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId);
-
+      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
       const userRole = roles && roles.length > 0 ? roles[0].role : null;
 
       if (!userRole) {
-        // New user needs role assignment
         const assignRole = selectedRole || "user";
         await supabase.from("user_roles").insert({ user_id: userId, role: assignRole });
         navigate(assignRole === "mechanic" ? "/setup/mechanic" : "/setup/user");
-      } else if (userRole === "user") {
+        return;
+      }
+
+      if (userRole === "user") {
         const { data: prof } = await supabase.from("profiles").select("name").eq("user_id", userId).single();
         navigate(prof?.name ? "/dashboard" : "/setup/user");
-      } else if (userRole === "mechanic") {
-        const { data: mechProf } = await supabase.from("mechanic_profiles").select("id").eq("user_id", userId).single();
-        navigate(mechProf ? "/mechanic-dashboard" : "/setup/mechanic");
+        return;
       }
+
+      const { data: mechProf } = await supabase.from("mechanic_profiles").select("id").eq("user_id", userId).single();
+      navigate(mechProf ? "/mechanic-dashboard" : "/setup/mechanic");
     } catch (e: any) {
       toast.error(e.message || "Login failed");
     } finally {
@@ -102,32 +155,44 @@ const Login = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
         <div className="w-full max-w-sm flex flex-col items-center">
-          <img src={logo} alt="After Brakes" className="h-16 w-16 mb-4 animate-fade-in" />
-          <h1 className="font-brand text-3xl font-bold text-foreground mb-1">After Brakes</h1>
-          <div className="h-1 w-16 bg-primary rounded-full mb-2 animate-pulse-glow" />
+          <img src={logo} alt="After Brakes" className="mb-4 h-16 w-16 animate-fade-in" />
+          <h1 className="mb-1 font-brand text-3xl font-bold text-foreground">After Brakes</h1>
+          <div className="mb-2 h-1 w-16 rounded-full bg-primary animate-pulse-glow" />
 
-          <div className="w-full bg-card rounded-xl p-6 border border-border animate-slide-up text-center">
-            <Mail className="h-12 w-12 text-primary mx-auto mb-4" />
-            <h2 className="text-lg font-semibold text-foreground mb-2">Check your email</h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              We've sent a verification link to <span className="font-medium text-foreground">{email}</span>.
-              Click the link to verify your account.
+          <div className="w-full animate-slide-up rounded-xl border border-border bg-card p-6 text-center">
+            <Mail className="mx-auto mb-4 h-12 w-12 text-primary" />
+            <h2 className="mb-2 text-lg font-semibold text-foreground">Check your email</h2>
+            <p className="mb-3 text-sm text-muted-foreground">
+              We sent a verification link to <span className="font-medium text-foreground">{email}</span>.
             </p>
-            <p className="text-xs text-muted-foreground mb-6">
-              After verifying, come back here and log in.
+            <p className="mb-6 text-xs text-muted-foreground">
+              When you tap <span className="font-medium text-foreground">Verify Email</span>, it will open the app and complete verification automatically.
             </p>
-            <Button
-              className="w-full"
-              variant="outline"
-              onClick={() => { setEmailSent(false); setMode("login"); setPassword(""); }}
-            >
-              <LogIn className="h-4 w-4 mr-2" /> Go to Login
-            </Button>
+
+            <div className="space-y-3">
+              <Button className="w-full" onClick={handleResendVerification} disabled={resending}>
+                {resending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                Resend verification email
+              </Button>
+
+              <Button
+                className="w-full"
+                variant="outline"
+                onClick={() => {
+                  setEmailSent(false);
+                  setMode("login");
+                  setPassword("");
+                  setConfirmPassword("");
+                }}
+              >
+                <LogIn className="mr-2 h-4 w-4" /> Go to Login
+              </Button>
+            </div>
           </div>
 
           <button
             onClick={() => navigate("/", { replace: true })}
-            className="mt-8 flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+            className="mt-8 flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-primary"
           >
             <ArrowLeft className="h-4 w-4" /> Back to Role Selection
           </button>
@@ -139,69 +204,76 @@ const Login = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm flex flex-col items-center">
-        <img src={logo} alt="After Brakes" className="h-16 w-16 mb-4 animate-fade-in" />
-        <h1 className="font-brand text-3xl font-bold text-foreground mb-1">After Brakes</h1>
-        <div className="h-1 w-16 bg-primary rounded-full mb-2 animate-pulse-glow" />
-        <p className="text-muted-foreground text-sm mb-8">Right Mechanic. Right Time.</p>
+        <img src={logo} alt="After Brakes" className="mb-4 h-16 w-16 animate-fade-in" />
+        <h1 className="mb-1 font-brand text-3xl font-bold text-foreground">After Brakes</h1>
+        <div className="mb-2 h-1 w-16 rounded-full bg-primary animate-pulse-glow" />
+        <p className="mb-8 text-sm text-muted-foreground">Right Mechanic. Right Time.</p>
 
-        <div className="w-full bg-card rounded-xl p-6 border border-border animate-slide-up">
-          {/* Mode toggle */}
-          <div className="flex bg-secondary rounded-lg p-1 mb-6">
+        <div className="w-full animate-slide-up rounded-xl border border-border bg-card p-6">
+          <div className="mb-6 flex rounded-lg bg-secondary p-1">
             <button
-              className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mode === "login" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
-              onClick={() => { setMode("login"); setPassword(""); setConfirmPassword(""); }}
+              className={`flex-1 rounded-md py-2 text-sm font-medium transition-all ${mode === "login" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+              onClick={() => {
+                setMode("login");
+                setPassword("");
+                setConfirmPassword("");
+              }}
             >
               Login
             </button>
             <button
-              className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mode === "signup" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
-              onClick={() => { setMode("signup"); setPassword(""); setConfirmPassword(""); }}
+              className={`flex-1 rounded-md py-2 text-sm font-medium transition-all ${mode === "signup" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+              onClick={() => {
+                setMode("signup");
+                setPassword("");
+                setConfirmPassword("");
+              }}
             >
               Sign Up
             </button>
           </div>
 
-          <label className="text-sm font-medium text-muted-foreground mb-2 block">Email</label>
-          <div className="flex gap-2 mb-4">
+          <label className="mb-2 block text-sm font-medium text-muted-foreground">Email</label>
+          <div className="mb-4 flex gap-2">
             <Input
               type="email"
               placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="bg-secondary border-0 text-foreground placeholder:text-muted-foreground"
+              className="border-0 bg-secondary text-foreground placeholder:text-muted-foreground"
             />
           </div>
 
-          <label className="text-sm font-medium text-muted-foreground mb-2 block">Password</label>
+          <label className="mb-2 block text-sm font-medium text-muted-foreground">Password</label>
           <Input
             type="password"
             placeholder={mode === "signup" ? "Create a password (min 6 chars)" : "Enter your password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="bg-secondary border-0 text-foreground placeholder:text-muted-foreground mb-4"
+            className="mb-4 border-0 bg-secondary text-foreground placeholder:text-muted-foreground"
           />
 
           {mode === "signup" && (
             <>
-              <label className="text-sm font-medium text-muted-foreground mb-2 block">Confirm Password</label>
+              <label className="mb-2 block text-sm font-medium text-muted-foreground">Confirm Password</label>
               <Input
                 type="password"
                 placeholder="Confirm your password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="bg-secondary border-0 text-foreground placeholder:text-muted-foreground mb-4"
+                className="mb-4 border-0 bg-secondary text-foreground placeholder:text-muted-foreground"
               />
             </>
           )}
 
           {mode === "login" ? (
             <Button className="w-full" onClick={handleLogin} disabled={loading}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <LogIn className="h-4 w-4 mr-2" />}
+              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
               Login
             </Button>
           ) : (
             <Button className="w-full" onClick={handleSignup} disabled={loading}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
+              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
               Create Account
             </Button>
           )}
@@ -209,7 +281,7 @@ const Login = () => {
 
         <button
           onClick={() => navigate("/", { replace: true })}
-          className="mt-8 flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+          className="mt-8 flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-primary"
         >
           <ArrowLeft className="h-4 w-4" /> Back to Role Selection
         </button>
