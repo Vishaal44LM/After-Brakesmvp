@@ -8,6 +8,7 @@ interface Profile {
   phone: string;
   name: string | null;
   area: string | null;
+  pincode?: string | null;
 }
 
 interface MechanicProfile {
