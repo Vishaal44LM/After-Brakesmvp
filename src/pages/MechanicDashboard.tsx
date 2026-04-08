@@ -221,6 +221,7 @@ const MechanicDashboard = () => {
         garage_address: editAddress,
         google_maps_link: editMapsLink || null,
         years_of_experience: parseInt(editExperience) || null,
+        phone_number: editPhoneNumber || null,
       } as any).eq("user_id", user!.id);
 
       await supabase.from("profiles").update({ name: editName, area: editArea }).eq("user_id", user!.id);
