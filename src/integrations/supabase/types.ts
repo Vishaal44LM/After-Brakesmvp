@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      emergency_alerts: {
+        Row: {
+          created_at: string
+          id: string
+          resolved_at: string | null
+          status: string
+          user_area: string | null
+          user_id: string
+          user_name: string | null
+          user_phone: string | null
+          vehicle_info: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          resolved_at?: string | null
+          status?: string
+          user_area?: string | null
+          user_id: string
+          user_name?: string | null
+          user_phone?: string | null
+          vehicle_info?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          resolved_at?: string | null
+          status?: string
+          user_area?: string | null
+          user_id?: string
+          user_name?: string | null
+          user_phone?: string | null
+          vehicle_info?: string | null
+        }
+        Relationships: []
+      }
       issues: {
         Row: {
           ai_analysis: Json | null
@@ -76,6 +112,7 @@ export type Database = {
           id_proof_url: string | null
           id_proof_verified: boolean | null
           name: string
+          phone_number: string | null
           pincode: string
           rating: number | null
           total_ratings: number | null
@@ -94,6 +131,7 @@ export type Database = {
           id_proof_url?: string | null
           id_proof_verified?: boolean | null
           name: string
+          phone_number?: string | null
           pincode: string
           rating?: number | null
           total_ratings?: number | null
@@ -112,6 +150,7 @@ export type Database = {
           id_proof_url?: string | null
           id_proof_verified?: boolean | null
           name?: string
+          phone_number?: string | null
           pincode?: string
           rating?: number | null
           total_ratings?: number | null

@@ -134,6 +134,9 @@ const FindMechanicSection = ({ user, vehicles }: { user: any; vehicles: any[] })
                     {m.years_of_experience && <span className="text-xs">{m.years_of_experience} yrs exp</span>}
                   </div>
                   {m.garage_address && <p className="text-xs text-muted-foreground mt-0.5">{m.garage_address}</p>}
+                  {(m as any).phone_number && (
+                    <p className="text-xs text-success mt-0.5 flex items-center gap-1"><Phone className="h-3 w-3" /> +91 {(m as any).phone_number}</p>
+                  )}
                 </div>
               </div>
               <div className="flex gap-2 mt-3">
@@ -552,6 +555,7 @@ const UserDashboard = () => {
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [editName, setEditName] = useState(profile?.name || "");
   const [editArea, setEditArea] = useState(profile?.area || "");
+  const [editPhone, setEditPhone] = useState(profile?.phone || "");
   const [savingProfile, setSavingProfile] = useState(false);
   const [newVehicle, setNewVehicle] = useState({ vehicle_type: "", vehicle_brand: "", vehicle_model: "", vehicle_year: "", fuel_type: "", transmission: "" });
   const [addingVehicle, setAddingVehicle] = useState(false);
@@ -560,6 +564,7 @@ const UserDashboard = () => {
     if (profile) {
       setEditName(profile.name || "");
       setEditArea(profile.area || "");
+      setEditPhone(profile.phone || "");
     }
   }, [profile]);
 
@@ -793,7 +798,7 @@ const UserDashboard = () => {
     if (!editArea) { toast.error("Area required"); return; }
     setSavingProfile(true);
     try {
-      await supabase.from("profiles").update({ name: editName, area: editArea }).eq("user_id", user!.id);
+      await supabase.from("profiles").update({ name: editName, area: editArea, phone: editPhone }).eq("user_id", user!.id);
       await refreshProfile();
       toast.success("Profile updated!");
     } catch (e: any) {
@@ -1016,6 +1021,9 @@ const UserDashboard = () => {
                       <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{r.mechanic?.area}</span>
                       <span className="flex items-center gap-1"><Star className="h-3 w-3 text-warning" />{r.mechanic?.rating || "New"}</span>
                     </div>
+                    {r.mechanic?.phone_number && (
+                      <p className="text-xs text-success mt-0.5 flex items-center gap-1"><Phone className="h-3 w-3" /> +91 {r.mechanic.phone_number}</p>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="text-foreground font-semibold text-sm flex items-center gap-0.5"><IndianRupee className="h-3 w-3" />{r.price_quote}</p>
@@ -1074,6 +1082,8 @@ const UserDashboard = () => {
                     <SelectTrigger className="bg-secondary border-0"><SelectValue /></SelectTrigger>
                     <SelectContent>{chennaiAreas.map((a) => (<SelectItem key={a} value={a}>{a}</SelectItem>))}</SelectContent>
                   </Select></div>
+                <div><label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1"><Phone className="h-3 w-3" /> Phone Number</label>
+                  <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, ""))} placeholder="10-digit phone number" maxLength={10} className="bg-secondary border-0" /></div>
                 <Button onClick={handleSaveProfile} disabled={savingProfile}>
                   {savingProfile ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />} Save
                 </Button>

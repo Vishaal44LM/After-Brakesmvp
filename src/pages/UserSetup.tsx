@@ -27,6 +27,7 @@ const UserSetup = () => {
   const { user, refreshProfile } = useAuth();
   const [name, setName] = useState("");
   const [area, setArea] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [loading, setLoading] = useState(false);
   const [vehicles, setVehicles] = useState<Vehicle[]>([
     { vehicle_type: "", vehicle_brand: "", vehicle_model: "", vehicle_year: "", fuel_type: "", transmission: "" },
@@ -58,7 +59,7 @@ const UserSetup = () => {
     try {
       const { error: profileError } = await supabase
         .from("profiles")
-        .update({ name, area })
+        .update({ name, area, phone: phoneNumber || "" })
         .eq("user_id", user.id);
       if (profileError) throw profileError;
 
@@ -110,7 +111,13 @@ const UserSetup = () => {
               <SelectContent>
                 {chennaiAreas.map((a) => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
               </SelectContent>
-            </Select>
+          </Select>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2">
+              <MapPin className="h-4 w-4" /> Phone Number
+            </label>
+            <Input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))} placeholder="10-digit phone number" maxLength={10} className="bg-secondary border-0" />
           </div>
         </div>
 

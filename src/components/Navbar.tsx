@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "@/assets/logo.png";
-import { LogOut, User, Wrench, Home } from "lucide-react";
+import { LogOut, Home, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface NavbarProps {
@@ -26,19 +26,27 @@ const Navbar = ({ role, onLogout }: NavbarProps) => {
         </div>
 
         <div className="flex items-center gap-2">
+          {role === "user" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/emergency")}
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            >
+              <AlertTriangle className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">SOS</span>
+            </Button>
+          )}
           {role && (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate(role === "user" ? "/dashboard" : "/mechanic-dashboard")}
-                className={location.pathname.includes("dashboard") ? "text-primary" : "text-muted-foreground"}
-              >
-                <Home className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">Dashboard</span>
-              </Button>
-              {/* Profile is handled via dashboard tabs - no separate route */}
-            </>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(role === "user" ? "/dashboard" : "/mechanic-dashboard")}
+              className={location.pathname.includes("dashboard") ? "text-primary" : "text-muted-foreground"}
+            >
+              <Home className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </Button>
           )}
           {onLogout && (
             <Button variant="ghost" size="sm" onClick={onLogout} className="text-muted-foreground">

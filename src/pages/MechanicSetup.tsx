@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { chennaiAreas } from "@/data/chennaiAreas";
 import { toast } from "sonner";
-import { User, Store, MapPin, Camera, Loader2, ArrowLeft, FileCheck, Clock, Link } from "lucide-react";
+import { User, Store, MapPin, Camera, Loader2, ArrowLeft, FileCheck, Clock, Link, Phone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -14,6 +14,7 @@ const MechanicSetup = () => {
   const navigate = useNavigate();
   const { user, refreshProfile } = useAuth();
   const [name, setName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [garageName, setGarageName] = useState("");
   const [area, setArea] = useState("");
   const [garageAddress, setGarageAddress] = useState("");
@@ -93,6 +94,7 @@ const MechanicSetup = () => {
         years_of_experience: parseInt(yearsOfExperience) || null,
         id_proof_url: idProofUrl,
         id_proof_verified: false,
+        phone_number: phoneNumber || null,
       } as any);
       if (error) throw error;
 
@@ -156,6 +158,10 @@ const MechanicSetup = () => {
           <div>
             <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><Clock className="h-4 w-4" /> Years of Experience</label>
             <Input value={yearsOfExperience} onChange={(e) => setYearsOfExperience(e.target.value.replace(/\D/g, ""))} placeholder="e.g. 5" maxLength={2} className="bg-secondary border-0" />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><Phone className="h-4 w-4" /> Phone Number</label>
+            <Input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))} placeholder="10-digit number" maxLength={10} className="bg-secondary border-0" />
           </div>
           <div>
             <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><FileCheck className="h-4 w-4" /> ID Proof <span className="text-destructive">*</span></label>

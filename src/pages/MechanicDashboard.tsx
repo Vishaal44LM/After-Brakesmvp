@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Car, MapPin, AlertTriangle, IndianRupee, MessageCircle, Send, Loader2,
-  Clock, Star, Edit2, Save, Camera, Store, User, Phone, Search, Link, FileCheck
+  Clock, Star, Edit2, Save, Camera, Store, User, Phone, Search, Link, FileCheck,
+  Siren
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,9 +43,13 @@ const MechanicDashboard = () => {
   const [editAddress, setEditAddress] = useState("");
   const [editMapsLink, setEditMapsLink] = useState("");
   const [editExperience, setEditExperience] = useState("");
+  const [editPhoneNumber, setEditPhoneNumber] = useState("");
   const [garagePhoto, setGaragePhoto] = useState<File | null>(null);
   const [garagePhotoPreview, setGaragePhotoPreview] = useState<string | null>(mechanicProfile?.garage_photo_url || null);
   const [savingProfile, setSavingProfile] = useState(false);
+
+  const [emergencyAlerts, setEmergencyAlerts] = useState<any[]>([]);
+  const [loadingEmergencies, setLoadingEmergencies] = useState(false);
 
   useEffect(() => {
     if (mechanicProfile) {
@@ -58,11 +63,12 @@ const MechanicDashboard = () => {
 
   const loadExtendedProfile = async () => {
     if (!user) return;
-    const { data } = await supabase.from("mechanic_profiles").select("garage_address, google_maps_link, years_of_experience").eq("user_id", user.id).single();
+    const { data } = await supabase.from("mechanic_profiles").select("garage_address, google_maps_link, years_of_experience, phone_number").eq("user_id", user.id).single();
     if (data) {
       setEditAddress((data as any).garage_address || "");
       setEditMapsLink((data as any).google_maps_link || "");
       setEditExperience((data as any).years_of_experience?.toString() || "");
+      setEditPhoneNumber((data as any).phone_number || "");
     }
   };
 
@@ -71,8 +77,21 @@ const MechanicDashboard = () => {
       fetchNearbyIssues();
       fetchMyResponses();
       fetchPhoneConsents();
+      fetchEmergencyAlerts();
     }
   }, [user, mechanicProfile]);
+
+  const fetchEmergencyAlerts = async () => {
+    setLoadingEmergencies(true);
+    try {
+      const { data } = await supabase.from("emergency_alerts").select("*").eq("status", "active").order("created_at", { ascending: false });
+      setEmergencyAlerts((data as any[]) || []);
+    } catch {
+      setEmergencyAlerts([]);
+    } finally {
+      setLoadingEmergencies(false);
+    }
+  };
 
   const fetchNearbyIssues = async (overrideArea?: string) => {
     if (!user) return;
@@ -202,6 +221,7 @@ const MechanicDashboard = () => {
         garage_address: editAddress,
         google_maps_link: editMapsLink || null,
         years_of_experience: parseInt(editExperience) || null,
+        phone_number: editPhoneNumber || null,
       } as any).eq("user_id", user!.id);
 
       await supabase.from("profiles").update({ name: editName, area: editArea }).eq("user_id", user!.id);
@@ -224,11 +244,54 @@ const MechanicDashboard = () => {
       <Navbar role="mechanic" onLogout={handleLogout} />
       <div className="container max-w-2xl py-4 px-4">
         <Tabs defaultValue="issues" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-secondary">
-            <TabsTrigger value="issues" className="text-xs">Nearby Issues</TabsTrigger>
-            <TabsTrigger value="responses" className="text-xs">My Responses</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 bg-secondary">
+            <TabsTrigger value="emergency" className="text-xs text-destructive">🚨 SOS</TabsTrigger>
+            <TabsTrigger value="issues" className="text-xs">Issues</TabsTrigger>
+            <TabsTrigger value="responses" className="text-xs">Responses</TabsTrigger>
             <TabsTrigger value="profile" className="text-xs">Profile</TabsTrigger>
           </TabsList>
+
+          {/* EMERGENCY ALERTS */}
+          <TabsContent value="emergency" className="space-y-3 mt-4">
+            <h2 className="text-lg font-semibold text-destructive flex items-center gap-2">
+              <Siren className="h-5 w-5" /> Emergency Alerts
+            </h2>
+            {loadingEmergencies && <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-destructive" /></div>}
+            {!loadingEmergencies && emergencyAlerts.length === 0 && (
+              <div className="text-center text-muted-foreground text-sm py-10">No active emergency alerts.</div>
+            )}
+            {emergencyAlerts.map((alert: any) => (
+              <div key={alert.id} className="bg-destructive/5 border-2 border-destructive/30 rounded-xl p-5 animate-slide-up relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-destructive animate-pulse" />
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                  <span className="text-sm font-bold text-destructive uppercase tracking-wide">Emergency</span>
+                  <span className="text-xs text-muted-foreground ml-auto">{new Date(alert.created_at).toLocaleString()}</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-foreground font-medium">{alert.user_name || "Unknown"}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-foreground">{alert.user_area || "Unknown Area"}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-success font-medium">+91 {alert.user_phone || "N/A"}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Car className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-foreground">{alert.vehicle_info || "Not specified"}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <Button variant="outline" onClick={fetchEmergencyAlerts} className="w-full">
+              <Loader2 className="h-4 w-4 mr-1" /> Refresh Alerts
+            </Button>
+          </TabsContent>
 
           {/* NEARBY ISSUES */}
           <TabsContent value="issues" className="space-y-3 mt-4">
@@ -392,6 +455,8 @@ const MechanicDashboard = () => {
                   <Input value={editMapsLink} onChange={(e) => setEditMapsLink(e.target.value)} placeholder="https://maps.google.com/..." className="bg-secondary border-0" /></div>
                 <div><label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1"><Clock className="h-3 w-3" /> Years of Experience</label>
                   <Input value={editExperience} onChange={(e) => setEditExperience(e.target.value.replace(/\D/g, ""))} placeholder="e.g. 5" maxLength={2} className="bg-secondary border-0" /></div>
+                <div><label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1"><Phone className="h-3 w-3" /> Phone Number</label>
+                  <Input value={editPhoneNumber} onChange={(e) => setEditPhoneNumber(e.target.value.replace(/\D/g, ""))} placeholder="10-digit number" maxLength={10} className="bg-secondary border-0" /></div>
 
                 <div className="bg-secondary rounded-lg p-3">
                   <div className="flex items-center gap-2">
