@@ -552,6 +552,7 @@ const UserDashboard = () => {
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [editName, setEditName] = useState(profile?.name || "");
   const [editArea, setEditArea] = useState(profile?.area || "");
+  const [editPhone, setEditPhone] = useState(profile?.phone || "");
   const [savingProfile, setSavingProfile] = useState(false);
   const [newVehicle, setNewVehicle] = useState({ vehicle_type: "", vehicle_brand: "", vehicle_model: "", vehicle_year: "", fuel_type: "", transmission: "" });
   const [addingVehicle, setAddingVehicle] = useState(false);
@@ -560,6 +561,7 @@ const UserDashboard = () => {
     if (profile) {
       setEditName(profile.name || "");
       setEditArea(profile.area || "");
+      setEditPhone(profile.phone || "");
     }
   }, [profile]);
 
@@ -793,7 +795,7 @@ const UserDashboard = () => {
     if (!editArea) { toast.error("Area required"); return; }
     setSavingProfile(true);
     try {
-      await supabase.from("profiles").update({ name: editName, area: editArea }).eq("user_id", user!.id);
+      await supabase.from("profiles").update({ name: editName, area: editArea, phone: editPhone }).eq("user_id", user!.id);
       await refreshProfile();
       toast.success("Profile updated!");
     } catch (e: any) {
@@ -1074,6 +1076,8 @@ const UserDashboard = () => {
                     <SelectTrigger className="bg-secondary border-0"><SelectValue /></SelectTrigger>
                     <SelectContent>{chennaiAreas.map((a) => (<SelectItem key={a} value={a}>{a}</SelectItem>))}</SelectContent>
                   </Select></div>
+                <div><label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1"><Phone className="h-3 w-3" /> Phone Number</label>
+                  <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, ""))} placeholder="10-digit phone number" maxLength={10} className="bg-secondary border-0" /></div>
                 <Button onClick={handleSaveProfile} disabled={savingProfile}>
                   {savingProfile ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />} Save
                 </Button>
