@@ -134,6 +134,9 @@ const FindMechanicSection = ({ user, vehicles }: { user: any; vehicles: any[] })
                     {m.years_of_experience && <span className="text-xs">{m.years_of_experience} yrs exp</span>}
                   </div>
                   {m.garage_address && <p className="text-xs text-muted-foreground mt-0.5">{m.garage_address}</p>}
+                  {(m as any).phone_number && (
+                    <p className="text-xs text-success mt-0.5 flex items-center gap-1"><Phone className="h-3 w-3" /> +91 {(m as any).phone_number}</p>
+                  )}
                 </div>
               </div>
               <div className="flex gap-2 mt-3">
