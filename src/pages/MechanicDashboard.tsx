@@ -244,11 +244,54 @@ const MechanicDashboard = () => {
       <Navbar role="mechanic" onLogout={handleLogout} />
       <div className="container max-w-2xl py-4 px-4">
         <Tabs defaultValue="issues" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-secondary">
-            <TabsTrigger value="issues" className="text-xs">Nearby Issues</TabsTrigger>
-            <TabsTrigger value="responses" className="text-xs">My Responses</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 bg-secondary">
+            <TabsTrigger value="emergency" className="text-xs text-destructive">🚨 SOS</TabsTrigger>
+            <TabsTrigger value="issues" className="text-xs">Issues</TabsTrigger>
+            <TabsTrigger value="responses" className="text-xs">Responses</TabsTrigger>
             <TabsTrigger value="profile" className="text-xs">Profile</TabsTrigger>
           </TabsList>
+
+          {/* EMERGENCY ALERTS */}
+          <TabsContent value="emergency" className="space-y-3 mt-4">
+            <h2 className="text-lg font-semibold text-destructive flex items-center gap-2">
+              <Siren className="h-5 w-5" /> Emergency Alerts
+            </h2>
+            {loadingEmergencies && <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-destructive" /></div>}
+            {!loadingEmergencies && emergencyAlerts.length === 0 && (
+              <div className="text-center text-muted-foreground text-sm py-10">No active emergency alerts.</div>
+            )}
+            {emergencyAlerts.map((alert: any) => (
+              <div key={alert.id} className="bg-destructive/5 border-2 border-destructive/30 rounded-xl p-5 animate-slide-up relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-destructive animate-pulse" />
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                  <span className="text-sm font-bold text-destructive uppercase tracking-wide">Emergency</span>
+                  <span className="text-xs text-muted-foreground ml-auto">{new Date(alert.created_at).toLocaleString()}</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-foreground font-medium">{alert.user_name || "Unknown"}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-foreground">{alert.user_area || "Unknown Area"}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-success font-medium">+91 {alert.user_phone || "N/A"}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Car className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-foreground">{alert.vehicle_info || "Not specified"}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <Button variant="outline" onClick={fetchEmergencyAlerts} className="w-full">
+              <Loader2 className="h-4 w-4 mr-1" /> Refresh Alerts
+            </Button>
+          </TabsContent>
 
           {/* NEARBY ISSUES */}
           <TabsContent value="issues" className="space-y-3 mt-4">
