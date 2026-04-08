@@ -1,164 +1,57 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Phone, ArrowRight, ArrowLeft, Loader2, Lock, KeyRound } from "lucide-react";
+import { Mail, ArrowRight, ArrowLeft, Loader2, Lock, UserPlus, LogIn } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const navigate = useNavigate();
-  const [phone, setPhone] = useState("");
-  const [pin, setPin] = useState("");
-  const [confirmPin, setConfirmPin] = useState("");
-  const [step, setStep] = useState<"phone" | "set-pin" | "enter-pin">("phone");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [mode, setMode] = useState<"login" | "signup">("login");
   const [loading, setLoading] = useState(false);
-  const [isNewUser, setIsNewUser] = useState(false);
-  const pinRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const confirmPinRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const selectedRole = localStorage.getItem("afterbrakes_selected_role") as "user" | "mechanic" | null;
-  const savedPhone = localStorage.getItem("afterbrakes_phone");
-
-  useEffect(() => {
-    // Clear stale auth on login page
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session && savedPhone) {
-        // Returning user with saved phone - auto check
-        setPhone(savedPhone);
-        handleCheckPhone(savedPhone);
-      }
-    });
-  }, []);
-
-  const handleCheckPhone = async (phoneNum: string) => {
-    if (!/^\d{10}$/.test(phoneNum)) {
-      toast.error("Enter a valid 10-digit phone number");
-      return;
-    }
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("auth-pin", {
-        body: { phone: phoneNum, action: "check" },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
-      if (data.exists && data.hasPin) {
-        setStep("enter-pin");
-        setIsNewUser(false);
-      } else if (data.exists && !data.hasPin) {
-        // Existing user migrating from OTP - needs to set PIN
-        setStep("set-pin");
-        setIsNewUser(false);
-      } else {
-        setStep("set-pin");
-        setIsNewUser(true);
-      }
-    } catch (e: any) {
-      toast.error(e.message || "Failed to check phone");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePinInput = (value: string, index: number, setter: (v: string) => void, currentPin: string, refs: React.MutableRefObject<(HTMLInputElement | null)[]>) => {
-    const digit = value.replace(/\D/g, "").slice(-1);
-    const newPin = currentPin.split("");
-    newPin[index] = digit;
-    setter(newPin.join(""));
-    if (digit && index < 3) {
-      refs.current[index + 1]?.focus();
-    }
-  };
-
-  const handlePinKeyDown = (e: React.KeyboardEvent, index: number, currentPin: string, setter: (v: string) => void, refs: React.MutableRefObject<(HTMLInputElement | null)[]>) => {
-    if (e.key === "Backspace" && !currentPin[index] && index > 0) {
-      refs.current[index - 1]?.focus();
-      const newPin = currentPin.split("");
-      newPin[index - 1] = "";
-      setter(newPin.join(""));
-    }
-  };
-
-  const handleRegister = async () => {
-    if (pin.replace(/\s/g, "").length !== 4) {
-      toast.error("Enter a 4-digit PIN");
-      return;
-    }
-    if (pin !== confirmPin) {
-      toast.error("PINs don't match");
-      return;
-    }
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("auth-pin", {
-        body: { phone, pin, action: "register" },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
-      // Sign in with the new credentials
-      const email = data.email;
-      const password = `AB_pin_${phone}_${pin}`;
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInError) throw signInError;
-
-      // Save phone to localStorage
-      localStorage.setItem("afterbrakes_phone", phone);
-
-      if (data.isNew || !data.role) {
-        // New user - assign role
-        const role = selectedRole || "user";
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        if (currentUser) {
-          await supabase.from("user_roles").insert({ user_id: currentUser.id, role });
-        }
-        navigate(role === "mechanic" ? "/setup/mechanic" : "/setup/user");
-      } else if (data.role === "user") {
-        navigate(data.profileComplete ? "/dashboard" : "/setup/user");
-      } else if (data.role === "mechanic") {
-        navigate(data.profileComplete ? "/mechanic-dashboard" : "/setup/mechanic");
-      }
-    } catch (e: any) {
-      toast.error(e.message || "Registration failed");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleLogin = async () => {
-    if (pin.replace(/\s/g, "").length !== 4) {
-      toast.error("Enter your 4-digit PIN");
-      return;
-    }
+    if (!email.trim() || !password) { toast.error("Enter email and password"); return; }
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("auth-pin", {
-        body: { phone, pin, action: "login" },
-      });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
 
-      const email = data.email;
-      const password = `AB_pin_${phone}_${pin}`;
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInError) throw signInError;
+      const userId = data.user.id;
 
-      localStorage.setItem("afterbrakes_phone", phone);
+      // Check role
+      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+      const role = roles && roles.length > 0 ? roles[0].role : null;
 
-      if (!data.role) {
-        const role = selectedRole || "user";
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        if (currentUser) {
-          await supabase.from("user_roles").insert({ user_id: currentUser.id, role });
+      if (!role) {
+        const r = selectedRole || "user";
+        await supabase.from("user_roles").insert({ user_id: userId, role: r });
+        // Create profile if needed
+        const { data: existingProfile } = await supabase.from("profiles").select("id").eq("user_id", userId).single();
+        if (!existingProfile) {
+          await supabase.from("profiles").insert({ user_id: userId, phone: "" });
         }
-        navigate(role === "mechanic" ? "/setup/mechanic" : "/setup/user");
-      } else if (data.role === "user") {
-        navigate(data.profileComplete ? "/dashboard" : "/setup/user");
-      } else if (data.role === "mechanic") {
-        navigate(data.profileComplete ? "/mechanic-dashboard" : "/setup/mechanic");
+        navigate(r === "mechanic" ? "/setup/mechanic" : "/setup/user");
+      } else {
+        // Check profile completeness
+        const { data: prof } = await supabase.from("profiles").select("name").eq("user_id", userId).single();
+        let profileComplete = !!prof?.name;
+        if (role === "mechanic") {
+          const { data: mechProf } = await supabase.from("mechanic_profiles").select("id").eq("user_id", userId).single();
+          if (!mechProf) profileComplete = false;
+        }
+        if (role === "user") {
+          navigate(profileComplete ? "/dashboard" : "/setup/user");
+        } else {
+          navigate(profileComplete ? "/mechanic-dashboard" : "/setup/mechanic");
+        }
       }
     } catch (e: any) {
       toast.error(e.message || "Login failed");
@@ -167,12 +60,32 @@ const Login = () => {
     }
   };
 
-  const handleChangeNumber = () => {
-    setStep("phone");
-    setPhone("");
-    setPin("");
-    setConfirmPin("");
-    localStorage.removeItem("afterbrakes_phone");
+  const handleSignup = async () => {
+    if (!email.trim() || !password) { toast.error("Enter email and password"); return; }
+    if (password.length < 6) { toast.error("Password must be at least 6 characters"); return; }
+    if (password !== confirmPassword) { toast.error("Passwords don't match"); return; }
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) throw error;
+      if (!data.user) throw new Error("Signup failed");
+
+      const userId = data.user.id;
+      const role = selectedRole || "user";
+
+      // Assign role
+      await supabase.from("user_roles").insert({ user_id: userId, role });
+
+      // Create profile
+      await supabase.from("profiles").upsert({ user_id: userId, phone: "" }, { onConflict: "user_id" });
+
+      toast.success("Account created!");
+      navigate(role === "mechanic" ? "/setup/mechanic" : "/setup/user");
+    } catch (e: any) {
+      toast.error(e.message || "Signup failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -184,120 +97,81 @@ const Login = () => {
         <p className="text-muted-foreground text-sm mb-8">Right Mechanic. Right Time.</p>
 
         <div className="w-full bg-card rounded-xl p-6 border border-border animate-slide-up">
-          {step === "phone" && (
-            <>
-              <label className="text-sm font-medium text-muted-foreground mb-2 block">Phone Number</label>
-              <div className="flex gap-2 mb-4">
-                <div className="flex items-center bg-secondary rounded-lg px-3 text-sm text-muted-foreground">+91</div>
+          {/* Toggle login/signup */}
+          <div className="flex bg-secondary rounded-lg p-1 mb-6">
+            <button
+              onClick={() => setMode("login")}
+              className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
+                mode === "login" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+              }`}
+            >
+              Log In
+            </button>
+            <button
+              onClick={() => setMode("signup")}
+              className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
+                mode === "signup" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+              }`}
+            >
+              Sign Up
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2">
+                <Mail className="h-4 w-4" /> Email
+              </label>
+              <Input
+                type="email"
+                placeholder="your@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="bg-secondary border-0 text-foreground placeholder:text-muted-foreground"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2">
+                <Lock className="h-4 w-4" /> Password
+              </label>
+              <Input
+                type="password"
+                placeholder="Enter password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="bg-secondary border-0 text-foreground placeholder:text-muted-foreground"
+              />
+            </div>
+            {mode === "signup" && (
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2">
+                  <Lock className="h-4 w-4" /> Confirm Password
+                </label>
                 <Input
-                  type="tel"
-                  placeholder="Enter 10-digit number"
-                  maxLength={10}
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                  type="password"
+                  placeholder="Confirm password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                   className="bg-secondary border-0 text-foreground placeholder:text-muted-foreground"
                 />
               </div>
-              <Button className="w-full" onClick={() => handleCheckPhone(phone)} disabled={loading || phone.length !== 10}>
-                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Phone className="h-4 w-4 mr-2" />}
-                Continue
-              </Button>
-            </>
-          )}
+            )}
+          </div>
 
-          {step === "set-pin" && (
-            <>
-              <div className="text-center mb-4">
-                <KeyRound className="h-8 w-8 text-primary mx-auto mb-2" />
-                <p className="text-sm font-medium text-foreground">
-                  {isNewUser ? "Set your 4-digit PIN" : "Set a new PIN for your account"}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">+91 {phone}</p>
-              </div>
-
-              <label className="text-xs text-muted-foreground mb-2 block">Enter PIN</label>
-              <div className="flex gap-3 justify-center mb-4">
-                {[0, 1, 2, 3].map((i) => (
-                  <Input
-                    key={`pin-${i}`}
-                    ref={(el) => { pinRefs.current[i] = el; }}
-                    type="password"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={pin[i] || ""}
-                    onChange={(e) => handlePinInput(e.target.value, i, setPin, pin, pinRefs)}
-                    onKeyDown={(e) => handlePinKeyDown(e, i, pin, setPin, pinRefs)}
-                    className="w-14 h-14 text-center text-xl bg-secondary border-0 text-foreground font-bold"
-                  />
-                ))}
-              </div>
-
-              <label className="text-xs text-muted-foreground mb-2 block">Confirm PIN</label>
-              <div className="flex gap-3 justify-center mb-4">
-                {[0, 1, 2, 3].map((i) => (
-                  <Input
-                    key={`confirm-${i}`}
-                    ref={(el) => { confirmPinRefs.current[i] = el; }}
-                    type="password"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={confirmPin[i] || ""}
-                    onChange={(e) => handlePinInput(e.target.value, i, setConfirmPin, confirmPin, confirmPinRefs)}
-                    onKeyDown={(e) => handlePinKeyDown(e, i, confirmPin, setConfirmPin, confirmPinRefs)}
-                    className="w-14 h-14 text-center text-xl bg-secondary border-0 text-foreground font-bold"
-                  />
-                ))}
-              </div>
-
-              <Button className="w-full" onClick={handleRegister} disabled={loading || pin.length !== 4 || confirmPin.length !== 4}>
-                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Lock className="h-4 w-4 mr-2" />}
-                {isNewUser ? "Create Account" : "Set PIN & Continue"}
-              </Button>
-              <button
-                className="w-full text-center text-sm text-muted-foreground mt-3 hover:text-primary transition-colors"
-                onClick={handleChangeNumber}
-              >
-                Change phone number
-              </button>
-            </>
-          )}
-
-          {step === "enter-pin" && (
-            <>
-              <div className="text-center mb-4">
-                <Lock className="h-8 w-8 text-primary mx-auto mb-2" />
-                <p className="text-sm font-medium text-foreground">Enter your 4-digit PIN</p>
-                <p className="text-xs text-muted-foreground mt-1">+91 {phone}</p>
-              </div>
-
-              <div className="flex gap-3 justify-center mb-4">
-                {[0, 1, 2, 3].map((i) => (
-                  <Input
-                    key={`login-pin-${i}`}
-                    ref={(el) => { pinRefs.current[i] = el; }}
-                    type="password"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={pin[i] || ""}
-                    onChange={(e) => handlePinInput(e.target.value, i, setPin, pin, pinRefs)}
-                    onKeyDown={(e) => handlePinKeyDown(e, i, pin, setPin, pinRefs)}
-                    className="w-14 h-14 text-center text-xl bg-secondary border-0 text-foreground font-bold"
-                  />
-                ))}
-              </div>
-
-              <Button className="w-full" onClick={handleLogin} disabled={loading || pin.length !== 4}>
-                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ArrowRight className="h-4 w-4 mr-2" />}
-                Unlock
-              </Button>
-              <button
-                className="w-full text-center text-sm text-muted-foreground mt-3 hover:text-primary transition-colors"
-                onClick={handleChangeNumber}
-              >
-                Not you? Change number
-              </button>
-            </>
-          )}
+          <Button
+            className="w-full mt-4"
+            onClick={mode === "login" ? handleLogin : handleSignup}
+            disabled={loading}
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : mode === "login" ? (
+              <LogIn className="h-4 w-4 mr-2" />
+            ) : (
+              <UserPlus className="h-4 w-4 mr-2" />
+            )}
+            {mode === "login" ? "Log In" : "Create Account"}
+          </Button>
         </div>
 
         <button onClick={() => navigate("/", { replace: true })} className="mt-8 flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
