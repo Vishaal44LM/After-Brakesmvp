@@ -1021,6 +1021,9 @@ const UserDashboard = () => {
                       <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{r.mechanic?.area}</span>
                       <span className="flex items-center gap-1"><Star className="h-3 w-3 text-warning" />{r.mechanic?.rating || "New"}</span>
                     </div>
+                    {r.mechanic?.phone_number && (
+                      <p className="text-xs text-success mt-0.5 flex items-center gap-1"><Phone className="h-3 w-3" /> +91 {r.mechanic.phone_number}</p>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="text-foreground font-semibold text-sm flex items-center gap-0.5"><IndianRupee className="h-3 w-3" />{r.price_quote}</p>
