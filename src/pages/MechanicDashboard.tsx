@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Car, MapPin, AlertTriangle, IndianRupee, MessageCircle, Send, Loader2,
-  Clock, Star, Edit2, Save, Camera, Store, User, Phone, Search, Link, FileCheck
+  Clock, Star, Edit2, Save, Camera, Store, User, Phone, Search, Link, FileCheck,
+  Siren
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,9 +43,13 @@ const MechanicDashboard = () => {
   const [editAddress, setEditAddress] = useState("");
   const [editMapsLink, setEditMapsLink] = useState("");
   const [editExperience, setEditExperience] = useState("");
+  const [editPhoneNumber, setEditPhoneNumber] = useState("");
   const [garagePhoto, setGaragePhoto] = useState<File | null>(null);
   const [garagePhotoPreview, setGaragePhotoPreview] = useState<string | null>(mechanicProfile?.garage_photo_url || null);
   const [savingProfile, setSavingProfile] = useState(false);
+
+  const [emergencyAlerts, setEmergencyAlerts] = useState<any[]>([]);
+  const [loadingEmergencies, setLoadingEmergencies] = useState(false);
 
   useEffect(() => {
     if (mechanicProfile) {
@@ -58,11 +63,12 @@ const MechanicDashboard = () => {
 
   const loadExtendedProfile = async () => {
     if (!user) return;
-    const { data } = await supabase.from("mechanic_profiles").select("garage_address, google_maps_link, years_of_experience").eq("user_id", user.id).single();
+    const { data } = await supabase.from("mechanic_profiles").select("garage_address, google_maps_link, years_of_experience, phone_number").eq("user_id", user.id).single();
     if (data) {
       setEditAddress((data as any).garage_address || "");
       setEditMapsLink((data as any).google_maps_link || "");
       setEditExperience((data as any).years_of_experience?.toString() || "");
+      setEditPhoneNumber((data as any).phone_number || "");
     }
   };
 
@@ -71,8 +77,21 @@ const MechanicDashboard = () => {
       fetchNearbyIssues();
       fetchMyResponses();
       fetchPhoneConsents();
+      fetchEmergencyAlerts();
     }
   }, [user, mechanicProfile]);
+
+  const fetchEmergencyAlerts = async () => {
+    setLoadingEmergencies(true);
+    try {
+      const { data } = await supabase.from("emergency_alerts").select("*").eq("status", "active").order("created_at", { ascending: false });
+      setEmergencyAlerts((data as any[]) || []);
+    } catch {
+      setEmergencyAlerts([]);
+    } finally {
+      setLoadingEmergencies(false);
+    }
+  };
 
   const fetchNearbyIssues = async (overrideArea?: string) => {
     if (!user) return;
