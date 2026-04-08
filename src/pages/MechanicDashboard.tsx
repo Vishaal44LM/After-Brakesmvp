@@ -455,6 +455,8 @@ const MechanicDashboard = () => {
                   <Input value={editMapsLink} onChange={(e) => setEditMapsLink(e.target.value)} placeholder="https://maps.google.com/..." className="bg-secondary border-0" /></div>
                 <div><label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1"><Clock className="h-3 w-3" /> Years of Experience</label>
                   <Input value={editExperience} onChange={(e) => setEditExperience(e.target.value.replace(/\D/g, ""))} placeholder="e.g. 5" maxLength={2} className="bg-secondary border-0" /></div>
+                <div><label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1"><Phone className="h-3 w-3" /> Phone Number</label>
+                  <Input value={editPhoneNumber} onChange={(e) => setEditPhoneNumber(e.target.value.replace(/\D/g, ""))} placeholder="10-digit number" maxLength={10} className="bg-secondary border-0" /></div>
 
                 <div className="bg-secondary rounded-lg p-3">
                   <div className="flex items-center gap-2">
