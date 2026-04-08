@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { chennaiAreas } from "@/data/chennaiAreas";
 import { toast } from "sonner";
-import { User, Store, MapPin, Camera, Loader2, ArrowLeft, FileCheck, Clock, Link } from "lucide-react";
+import { User, Store, MapPin, Camera, Loader2, ArrowLeft, FileCheck, Clock, Link, Phone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
