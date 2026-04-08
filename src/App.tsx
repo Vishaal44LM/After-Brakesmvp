@@ -11,6 +11,7 @@ import MechanicSetup from "./pages/MechanicSetup";
 import UserDashboard from "./pages/UserDashboard";
 import MechanicDashboard from "./pages/MechanicDashboard";
 import ChatPage from "./pages/ChatPage";
+import EmergencyMode from "./pages/EmergencyMode";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/dashboard" element={<UserDashboard />} />
             <Route path="/mechanic-dashboard" element={<MechanicDashboard />} />
             <Route path="/chat/:issueId" element={<ChatPage />} />
+            <Route path="/emergency" element={<EmergencyMode />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
