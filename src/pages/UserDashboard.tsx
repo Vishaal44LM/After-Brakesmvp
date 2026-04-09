@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import {
   Loader2, Send, Bot, User, Check, Phone, Car, Edit2, Plus, Trash2, Save, Search, Wrench, Mic, MicOff, Volume2,
   FolderOpen, FileText, Shield, Leaf, CalendarDays
 } from "lucide-react";
+import AIMechanicCharacter from "@/components/AIMechanicCharacter";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -180,182 +181,7 @@ const FindMechanicSection = ({ user, vehicles }: { user: any; vehicles: any[] })
   );
 };
 
-// AI Voice Mechanic Component
-const AIVoiceMechanic = ({ profile, vehicles }: { profile: any; vehicles: any[] }) => {
-  const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
-  const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [transcript, setTranscript] = useState("");
-  const recognitionRef = useRef<any>(null);
-  const synthRef = useRef(window.speechSynthesis);
-  const chatEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const speak = useCallback((text: string) => {
-    synthRef.current.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.95;
-    utterance.pitch = 1;
-    utterance.lang = "en-IN";
-    setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-    synthRef.current.speak(utterance);
-  }, []);
-
-  const sendToAI = useCallback(async (userText: string) => {
-    const userMsg = { role: "user" as const, content: userText };
-    const newMessages = [...messages, userMsg];
-    setMessages(newMessages);
-    setIsProcessing(true);
-
-    const vehicleInfo = vehicles.map((v: any) => `${v.vehicle_type} ${v.vehicle_brand || ""} ${v.vehicle_model || ""}`).join(", ");
-
-    try {
-      const { data, error } = await supabase.functions.invoke("ai-voice-mechanic", {
-        body: {
-          messages: newMessages,
-          userContext: { area: profile?.area, vehicles: vehicleInfo },
-        },
-      });
-
-      if (error) throw error;
-      const reply = data?.reply || "Sorry, please try again.";
-      const assistantMsg = { role: "assistant" as const, content: reply };
-      setMessages(prev => [...prev, assistantMsg]);
-      speak(reply);
-    } catch (e: any) {
-      toast.error(e.message || "Voice AI error");
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [messages, profile, vehicles, speak]);
-
-  const startListening = useCallback(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      toast.error("Speech recognition not supported in this browser. Use Chrome.");
-      return;
-    }
-
-    synthRef.current.cancel();
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = "en-IN";
-
-    recognition.onstart = () => setIsListening(true);
-    recognition.onresult = (event: any) => {
-      const result = event.results[event.results.length - 1];
-      setTranscript(result[0].transcript);
-      if (result.isFinal) {
-        const finalText = result[0].transcript;
-        setTranscript("");
-        sendToAI(finalText);
-      }
-    };
-    recognition.onerror = (e: any) => {
-      console.error("Speech error:", e.error);
-      setIsListening(false);
-      if (e.error !== "aborted") toast.error("Could not hear you. Try again.");
-    };
-    recognition.onend = () => setIsListening(false);
-
-    recognitionRef.current = recognition;
-    recognition.start();
-  }, [sendToAI]);
-
-  const stopListening = useCallback(() => {
-    recognitionRef.current?.stop();
-    setIsListening(false);
-  }, []);
-
-  const resetConversation = () => {
-    synthRef.current.cancel();
-    setMessages([]);
-    setTranscript("");
-  };
-
-  return (
-    <section className="bg-card rounded-xl border border-border overflow-hidden animate-slide-up">
-      <div className="p-4 border-b border-border flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Mic className="h-5 w-5 text-primary" />
-          <h2 className="text-sm font-semibold text-foreground">AI Voice Mechanic</h2>
-        </div>
-        {messages.length > 0 && (
-          <Button size="sm" variant="ghost" onClick={resetConversation} className="text-xs text-muted-foreground">
-            Clear
-          </Button>
-        )}
-      </div>
-
-      <div className="h-[320px] overflow-y-auto p-4 space-y-3">
-        {messages.length === 0 && (
-          <div className="text-center text-muted-foreground text-sm py-10">
-            <Mic className="h-10 w-10 mx-auto mb-3 text-primary/50" />
-            <p className="font-medium mb-1">Tap the mic and describe your vehicle issue</p>
-            <p className="text-xs">Example: "My car won't start" or "I hear a clicking sound"</p>
-          </div>
-        )}
-        {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[85%] rounded-xl px-4 py-2.5 text-sm ${
-              msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
-            }`}>
-              {msg.role === "assistant" && <Volume2 className="h-3 w-3 inline mr-1 opacity-50" />}
-              {msg.content}
-            </div>
-          </div>
-        ))}
-        {isProcessing && (
-          <div className="flex justify-start">
-            <div className="bg-secondary rounded-xl px-4 py-2.5">
-              <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            </div>
-          </div>
-        )}
-        {transcript && (
-          <div className="flex justify-end">
-            <div className="max-w-[85%] rounded-xl px-4 py-2.5 text-sm bg-primary/30 text-foreground italic">
-              {transcript}...
-            </div>
-          </div>
-        )}
-        <div ref={chatEndRef} />
-      </div>
-
-      <div className="p-4 border-t border-border flex flex-col items-center gap-3">
-        {isSpeaking && (
-          <p className="text-xs text-primary animate-pulse flex items-center gap-1">
-            <Volume2 className="h-3 w-3" /> AI is speaking...
-          </p>
-        )}
-        <button
-          onClick={isListening ? stopListening : startListening}
-          disabled={isProcessing}
-          className={`h-16 w-16 rounded-full flex items-center justify-center transition-all ${
-            isListening
-              ? "bg-destructive text-destructive-foreground animate-pulse scale-110"
-              : isProcessing
-              ? "bg-muted text-muted-foreground cursor-not-allowed"
-              : "bg-primary text-primary-foreground hover:scale-105"
-          }`}
-        >
-          {isListening ? <MicOff className="h-7 w-7" /> : <Mic className="h-7 w-7" />}
-        </button>
-        <p className="text-xs text-muted-foreground">
-          {isListening ? "Listening... Tap to stop" : isProcessing ? "Processing..." : "Tap to speak"}
-        </p>
-      </div>
-    </section>
-  );
-};
-
+// AI Mechanic Character is now a standalone component
 // Digital Garage Component
 const DigitalGarage = ({ user, vehicles }: { user: any; vehicles: any[] }) => {
   const [documents, setDocuments] = useState<any[]>([]);
@@ -537,15 +363,6 @@ const UserDashboard = () => {
   const [submitting, setSubmitting] = useState(false);
   const [analysis, setAnalysis] = useState<any>(null);
 
-  // AI Tab State
-  const [aiMode, setAiMode] = useState<"chat" | "voice">("chat");
-
-  // AI Chat State
-  const [chatMessages, setChatMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
-  const [chatInput, setChatInput] = useState("");
-  const [chatLoading, setChatLoading] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
-
   // Mechanic Responses
   const [issues, setIssues] = useState<any[]>([]);
   const [responses, setResponses] = useState<any[]>([]);
@@ -691,81 +508,6 @@ const UserDashboard = () => {
     }
   };
 
-  // AI Chat
-  const handleSendChat = async () => {
-    if (!chatInput.trim() || chatLoading) return;
-    const userMsg = { role: "user" as const, content: chatInput };
-    setChatMessages((prev) => [...prev, userMsg]);
-    setChatInput("");
-    setChatLoading(true);
-
-    const vehicleInfo = vehicles.map((v: any) => `${v.vehicle_type} ${v.vehicle_brand || ""} ${v.vehicle_model || ""}`).join(", ");
-    const allMsgs = [...chatMessages, userMsg];
-
-    try {
-      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({
-          messages: allMsgs,
-          userContext: { area: profile?.area, vehicles: vehicleInfo },
-        }),
-      });
-
-      if (!resp.ok) {
-        const errData = await resp.json().catch(() => ({}));
-        throw new Error(errData.error || "Chat failed");
-      }
-
-      const reader = resp.body?.getReader();
-      if (!reader) throw new Error("No stream");
-      const decoder = new TextDecoder();
-      let assistantSoFar = "";
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        let newlineIndex: number;
-        while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
-          let line = buffer.slice(0, newlineIndex);
-          buffer = buffer.slice(newlineIndex + 1);
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (!line.startsWith("data: ")) continue;
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") break;
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              assistantSoFar += content;
-              setChatMessages((prev) => {
-                const last = prev[prev.length - 1];
-                if (last?.role === "assistant") {
-                  return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantSoFar } : m));
-                }
-                return [...prev, { role: "assistant", content: assistantSoFar }];
-              });
-            }
-          } catch {}
-        }
-      }
-    } catch (e: any) {
-      toast.error(e.message || "Chat error");
-    } finally {
-      setChatLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatMessages]);
-
   const handleAcceptResponse = async (responseId: string, mechanicId: string, issueId: string) => {
     try {
       await supabase.from("mechanic_responses").update({ status: "accepted" }).eq("id", responseId);
@@ -843,13 +585,12 @@ const UserDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-36">
       <Navbar role="user" onLogout={handleLogout} />
       <div className="container max-w-2xl py-4 px-4">
         <Tabs defaultValue="report" className="w-full">
-          <TabsList className="grid w-full grid-cols-6 bg-secondary">
+          <TabsList className="grid w-full grid-cols-5 bg-secondary">
             <TabsTrigger value="report" className="text-xs">Report</TabsTrigger>
-            <TabsTrigger value="ai" className="text-xs">AI</TabsTrigger>
             <TabsTrigger value="responses" className="text-xs">Quotes</TabsTrigger>
             <TabsTrigger value="find-mechanic" className="text-xs">Find</TabsTrigger>
             <TabsTrigger value="garage" className="text-xs">Garage</TabsTrigger>
@@ -941,62 +682,6 @@ const UserDashboard = () => {
                   <div className="bg-secondary rounded-lg p-3"><p className="text-xs text-muted-foreground">Recommendation</p><p className="text-sm text-foreground">{analysis.recommendation}</p></div>
                 </div>
               </section>
-            )}
-          </TabsContent>
-
-          {/* AI TAB */}
-          <TabsContent value="ai" className="mt-4 space-y-4">
-            <div className="flex gap-2 mb-2">
-              <Button size="sm" variant={aiMode === "chat" ? "default" : "outline"} onClick={() => setAiMode("chat")} className="flex-1">
-                <Bot className="h-4 w-4 mr-1" /> AI Chat
-              </Button>
-              <Button size="sm" variant={aiMode === "voice" ? "default" : "outline"} onClick={() => setAiMode("voice")} className="flex-1">
-                <Mic className="h-4 w-4 mr-1" /> AI Voice Mechanic
-              </Button>
-            </div>
-
-            {aiMode === "chat" ? (
-              <section className="bg-card rounded-xl border border-border overflow-hidden animate-slide-up">
-                <div className="p-4 border-b border-border flex items-center gap-2">
-                  <Bot className="h-5 w-5 text-primary" />
-                  <h2 className="text-sm font-semibold text-foreground">AI Assistant</h2>
-                </div>
-                <div className="h-[400px] overflow-y-auto p-4 space-y-3">
-                  {chatMessages.length === 0 && (
-                    <div className="text-center text-muted-foreground text-sm py-10">
-                      <Bot className="h-10 w-10 mx-auto mb-3 text-primary/50" />
-                      <p>Ask me about vehicle issues, maintenance tips, or finding mechanics in your area.</p>
-                    </div>
-                  )}
-                  {chatMessages.map((msg, i) => (
-                    <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm ${
-                        msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
-                      }`}>
-                        <pre className="whitespace-pre-wrap font-sans">{msg.content.replace(/\*+/g, "")}</pre>
-                      </div>
-                    </div>
-                  ))}
-                  {chatLoading && chatMessages[chatMessages.length - 1]?.role !== "assistant" && (
-                    <div className="flex justify-start"><div className="bg-secondary rounded-xl px-4 py-2.5"><Loader2 className="h-4 w-4 animate-spin text-primary" /></div></div>
-                  )}
-                  <div ref={chatEndRef} />
-                </div>
-                <div className="p-3 border-t border-border flex gap-2">
-                  <Input
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendChat()}
-                    placeholder="Ask about vehicle issues..."
-                    className="bg-secondary border-0"
-                  />
-                  <Button size="icon" onClick={handleSendChat} disabled={chatLoading || !chatInput.trim()}>
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-              </section>
-            ) : (
-              <AIVoiceMechanic profile={profile} vehicles={vehicles} />
             )}
           </TabsContent>
 
@@ -1128,6 +813,7 @@ const UserDashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+      <AIMechanicCharacter profile={profile} vehicles={vehicles} />
     </div>
   );
 };
