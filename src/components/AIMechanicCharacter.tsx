@@ -99,6 +99,7 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
   const handleClose = () => {
     setState("walking");
     setShowBubble(false);
+    setActiveMode(null);
     setChatMessages([]);
     setChatInput("");
     setTypingText("");
