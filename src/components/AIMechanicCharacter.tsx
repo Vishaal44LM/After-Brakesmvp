@@ -19,6 +19,7 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
   const [direction, setDirection] = useState<"right" | "left">("right");
   const [showBubble, setShowBubble] = useState(false);
   const [showHint, setShowHint] = useState(false);
+  const [activeMode, setActiveMode] = useState<"chat" | "voice" | null>(null);
   const [idleTimer, setIdleTimer] = useState<NodeJS.Timeout | null>(null);
 
   // Chat state
