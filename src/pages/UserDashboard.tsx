@@ -181,8 +181,8 @@ const FindMechanicSection = ({ user, vehicles }: { user: any; vehicles: any[] })
   );
 };
 
-// AI Voice Mechanic Component
-const AIVoiceMechanic = ({ profile, vehicles }: { profile: any; vehicles: any[] }) => {
+
+
   const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
