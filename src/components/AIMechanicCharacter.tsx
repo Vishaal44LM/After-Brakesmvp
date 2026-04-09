@@ -313,18 +313,17 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
         </div>
       )}
 
-      {/* Chat/Voice panel */}
-      {isInteracting && (
+      {/* TEXT CHAT panel */}
+      {isInteracting && activeMode === "chat" && (
         <div className="fixed bottom-0 right-0 z-50 pointer-events-auto w-full sm:w-[380px] sm:right-4 sm:bottom-4 animate-slide-up">
           <div className="bg-card border border-border rounded-t-xl sm:rounded-xl shadow-2xl overflow-hidden flex flex-col" style={{ maxHeight: "70vh" }}>
-            {/* Header */}
             <div className="p-3 border-b border-border flex items-center justify-between bg-primary/5">
               <div className="flex items-center gap-2">
                 <img src={mechanicWalkGif} alt="AI Mechanic" className="h-8 w-8 rounded-full object-cover bg-muted" />
                 <div>
-                  <h3 className="text-sm font-semibold text-foreground">AI Mechanic</h3>
+                  <h3 className="text-sm font-semibold text-foreground">AI Mechanic - Text Chat</h3>
                   <p className="text-[10px] text-muted-foreground">
-                    {state === "listening" ? "Listening..." : state === "responding" ? "Thinking..." : "Online"}
+                    {state === "responding" ? "Typing..." : "Online"}
                   </p>
                 </div>
               </div>
@@ -333,12 +332,11 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
               </button>
             </div>
 
-            {/* Messages */}
             <div className="flex-1 overflow-y-auto p-3 space-y-2.5" style={{ minHeight: "200px", maxHeight: "45vh" }}>
               {chatMessages.length === 0 && !typingText && (
                 <div className="text-center text-muted-foreground text-xs py-6">
-                  <Bot className="h-8 w-8 mx-auto mb-2 text-primary/40" />
-                  <p>Describe your vehicle issue and I'll help diagnose it!</p>
+                  <MessageCircle className="h-8 w-8 mx-auto mb-2 text-primary/40" />
+                  <p>Type your vehicle issue and I'll help diagnose it!</p>
                 </div>
               )}
               {chatMessages.map((msg, i) => (
@@ -347,9 +345,7 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
                     <img src={mechanicWalkGif} alt="" className="h-6 w-6 rounded-full object-cover bg-muted shrink-0 mt-1" />
                   )}
                   <div className={`max-w-[80%] rounded-xl px-3 py-2 text-xs ${
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary text-foreground"
+                    msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
                   }`}>
                     {msg.content}
                   </div>
@@ -371,34 +367,10 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
                   </div>
                 </div>
               )}
-              {transcript && (
-                <div className="flex justify-end">
-                  <div className="max-w-[80%] rounded-xl px-3 py-2 text-xs bg-primary/30 text-foreground italic">
-                    {transcript}...
-                  </div>
-                </div>
-              )}
               <div ref={chatEndRef} />
             </div>
 
-            {/* Input area */}
             <div className="p-2.5 border-t border-border flex items-center gap-2">
-              {isSpeaking && (
-                <p className="text-[10px] text-primary animate-pulse flex items-center gap-1 absolute -top-6 left-3">
-                  <Volume2 className="h-3 w-3" /> Speaking...
-                </p>
-              )}
-              <button
-                onClick={isListening ? stopListening : startListening}
-                disabled={isProcessing || chatLoading}
-                className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 transition-all ${
-                  isListening
-                    ? "bg-destructive text-destructive-foreground animate-pulse"
-                    : "bg-secondary text-muted-foreground hover:text-primary hover:bg-primary/10"
-                }`}
-              >
-                {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-              </button>
               <Input
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
@@ -409,6 +381,91 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
               <Button size="icon" className="h-9 w-9 shrink-0" onClick={handleSendChat} disabled={chatLoading || !chatInput.trim()}>
                 <Send className="h-3.5 w-3.5" />
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VOICE ASSISTANT panel */}
+      {isInteracting && activeMode === "voice" && (
+        <div className="fixed bottom-0 right-0 z-50 pointer-events-auto w-full sm:w-[380px] sm:right-4 sm:bottom-4 animate-slide-up">
+          <div className="bg-card border border-border rounded-t-xl sm:rounded-xl shadow-2xl overflow-hidden flex flex-col" style={{ maxHeight: "70vh" }}>
+            <div className="p-3 border-b border-border flex items-center justify-between bg-primary/5">
+              <div className="flex items-center gap-2">
+                <img src={mechanicWalkGif} alt="AI Mechanic" className="h-8 w-8 rounded-full object-cover bg-muted" />
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">AI Mechanic - Voice</h3>
+                  <p className="text-[10px] text-muted-foreground">
+                    {state === "listening" ? "Listening..." : state === "responding" ? "Thinking..." : isSpeaking ? "Speaking..." : "Tap mic to speak"}
+                  </p>
+                </div>
+              </div>
+              <button onClick={handleClose} className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-secondary transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-3 space-y-2.5" style={{ minHeight: "200px", maxHeight: "40vh" }}>
+              {chatMessages.length === 0 && !transcript && (
+                <div className="text-center text-muted-foreground text-xs py-6">
+                  <Mic className="h-8 w-8 mx-auto mb-2 text-primary/40" />
+                  <p className="font-medium mb-1">Tap the mic and describe your vehicle issue</p>
+                  <p className="text-[10px]">Example: "My car won't start" or "I hear a clicking sound"</p>
+                </div>
+              )}
+              {chatMessages.map((msg, i) => (
+                <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} gap-2`}>
+                  {msg.role === "assistant" && (
+                    <img src={mechanicWalkGif} alt="" className="h-6 w-6 rounded-full object-cover bg-muted shrink-0 mt-1" />
+                  )}
+                  <div className={`max-w-[80%] rounded-xl px-3 py-2 text-xs ${
+                    msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+                  }`}>
+                    {msg.role === "assistant" && <Volume2 className="h-3 w-3 inline mr-1 opacity-50" />}
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+              {isProcessing && (
+                <div className="flex justify-start gap-2">
+                  <img src={mechanicWalkGif} alt="" className="h-6 w-6 rounded-full object-cover bg-muted shrink-0 mt-1" />
+                  <div className="bg-secondary rounded-xl px-3 py-2">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                  </div>
+                </div>
+              )}
+              {transcript && (
+                <div className="flex justify-end">
+                  <div className="max-w-[80%] rounded-xl px-3 py-2 text-xs bg-primary/30 text-foreground italic">
+                    {transcript}...
+                  </div>
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+
+            <div className="p-4 border-t border-border flex flex-col items-center gap-3">
+              {isSpeaking && (
+                <p className="text-xs text-primary animate-pulse flex items-center gap-1">
+                  <Volume2 className="h-3 w-3" /> AI is speaking...
+                </p>
+              )}
+              <button
+                onClick={isListening ? stopListening : startListening}
+                disabled={isProcessing}
+                className={`h-16 w-16 rounded-full flex items-center justify-center transition-all ${
+                  isListening
+                    ? "bg-destructive text-destructive-foreground animate-pulse scale-110"
+                    : isProcessing
+                    ? "bg-muted text-muted-foreground cursor-not-allowed"
+                    : "bg-primary text-primary-foreground hover:scale-105"
+                }`}
+              >
+                {isListening ? <MicOff className="h-7 w-7" /> : <Mic className="h-7 w-7" />}
+              </button>
+              <p className="text-xs text-muted-foreground">
+                {isListening ? "Listening... Tap to stop" : isProcessing ? "Processing..." : "Tap to speak"}
+              </p>
             </div>
           </div>
         </div>
