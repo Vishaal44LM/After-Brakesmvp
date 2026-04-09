@@ -256,6 +256,7 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
   }, []);
 
   const selectMode = (mode: "chat" | "voice") => {
+    setActiveMode(mode);
     setState("chatting");
     setShowBubble(false);
     if (mode === "voice") {
