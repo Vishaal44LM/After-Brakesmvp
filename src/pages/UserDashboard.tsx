@@ -538,15 +538,6 @@ const UserDashboard = () => {
   const [submitting, setSubmitting] = useState(false);
   const [analysis, setAnalysis] = useState<any>(null);
 
-  // AI Tab State
-  const [aiMode, setAiMode] = useState<"chat" | "voice">("chat");
-
-  // AI Chat State
-  const [chatMessages, setChatMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
-  const [chatInput, setChatInput] = useState("");
-  const [chatLoading, setChatLoading] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
-
   // Mechanic Responses
   const [issues, setIssues] = useState<any[]>([]);
   const [responses, setResponses] = useState<any[]>([]);
