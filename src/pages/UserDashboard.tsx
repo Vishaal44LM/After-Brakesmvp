@@ -764,9 +764,8 @@ const UserDashboard = () => {
       <Navbar role="user" onLogout={handleLogout} />
       <div className="container max-w-2xl py-4 px-4">
         <Tabs defaultValue="report" className="w-full">
-          <TabsList className="grid w-full grid-cols-6 bg-secondary">
+          <TabsList className="grid w-full grid-cols-5 bg-secondary">
             <TabsTrigger value="report" className="text-xs">Report</TabsTrigger>
-            <TabsTrigger value="ai" className="text-xs">AI</TabsTrigger>
             <TabsTrigger value="responses" className="text-xs">Quotes</TabsTrigger>
             <TabsTrigger value="find-mechanic" className="text-xs">Find</TabsTrigger>
             <TabsTrigger value="garage" className="text-xs">Garage</TabsTrigger>
@@ -858,62 +857,6 @@ const UserDashboard = () => {
                   <div className="bg-secondary rounded-lg p-3"><p className="text-xs text-muted-foreground">Recommendation</p><p className="text-sm text-foreground">{analysis.recommendation}</p></div>
                 </div>
               </section>
-            )}
-          </TabsContent>
-
-          {/* AI TAB */}
-          <TabsContent value="ai" className="mt-4 space-y-4">
-            <div className="flex gap-2 mb-2">
-              <Button size="sm" variant={aiMode === "chat" ? "default" : "outline"} onClick={() => setAiMode("chat")} className="flex-1">
-                <Bot className="h-4 w-4 mr-1" /> AI Chat
-              </Button>
-              <Button size="sm" variant={aiMode === "voice" ? "default" : "outline"} onClick={() => setAiMode("voice")} className="flex-1">
-                <Mic className="h-4 w-4 mr-1" /> AI Voice Mechanic
-              </Button>
-            </div>
-
-            {aiMode === "chat" ? (
-              <section className="bg-card rounded-xl border border-border overflow-hidden animate-slide-up">
-                <div className="p-4 border-b border-border flex items-center gap-2">
-                  <Bot className="h-5 w-5 text-primary" />
-                  <h2 className="text-sm font-semibold text-foreground">AI Assistant</h2>
-                </div>
-                <div className="h-[400px] overflow-y-auto p-4 space-y-3">
-                  {chatMessages.length === 0 && (
-                    <div className="text-center text-muted-foreground text-sm py-10">
-                      <Bot className="h-10 w-10 mx-auto mb-3 text-primary/50" />
-                      <p>Ask me about vehicle issues, maintenance tips, or finding mechanics in your area.</p>
-                    </div>
-                  )}
-                  {chatMessages.map((msg, i) => (
-                    <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm ${
-                        msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
-                      }`}>
-                        <pre className="whitespace-pre-wrap font-sans">{msg.content.replace(/\*+/g, "")}</pre>
-                      </div>
-                    </div>
-                  ))}
-                  {chatLoading && chatMessages[chatMessages.length - 1]?.role !== "assistant" && (
-                    <div className="flex justify-start"><div className="bg-secondary rounded-xl px-4 py-2.5"><Loader2 className="h-4 w-4 animate-spin text-primary" /></div></div>
-                  )}
-                  <div ref={chatEndRef} />
-                </div>
-                <div className="p-3 border-t border-border flex gap-2">
-                  <Input
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendChat()}
-                    placeholder="Ask about vehicle issues..."
-                    className="bg-secondary border-0"
-                  />
-                  <Button size="icon" onClick={handleSendChat} disabled={chatLoading || !chatInput.trim()}>
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-              </section>
-            ) : (
-              <AIVoiceMechanic profile={profile} vehicles={vehicles} />
             )}
           </TabsContent>
 
