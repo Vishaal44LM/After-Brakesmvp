@@ -11,6 +11,7 @@ import {
   Loader2, Send, Bot, User, Check, Phone, Car, Edit2, Plus, Trash2, Save, Search, Wrench, Mic, MicOff, Volume2,
   FolderOpen, FileText, Shield, Leaf, CalendarDays
 } from "lucide-react";
+import AIMechanicCharacter from "@/components/AIMechanicCharacter";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
