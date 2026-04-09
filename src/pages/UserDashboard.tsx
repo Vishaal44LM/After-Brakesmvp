@@ -760,7 +760,7 @@ const UserDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-36">
       <Navbar role="user" onLogout={handleLogout} />
       <div className="container max-w-2xl py-4 px-4">
         <Tabs defaultValue="report" className="w-full">
@@ -988,6 +988,7 @@ const UserDashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+      <AIMechanicCharacter profile={profile} vehicles={vehicles} />
     </div>
   );
 };
