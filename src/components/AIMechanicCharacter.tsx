@@ -15,8 +15,6 @@ interface AIMechanicCharacterProps {
 
 const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) => {
   const [state, setState] = useState<CharacterState>("walking");
-  const [position, setPosition] = useState(20);
-  const [direction, setDirection] = useState<"right" | "left">("right");
   const [showBubble, setShowBubble] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [activeMode, setActiveMode] = useState<"chat" | "voice" | null>(null);
@@ -36,9 +34,6 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
   const [transcript, setTranscript] = useState("");
   const recognitionRef = useRef<any>(null);
   const synthRef = useRef(window.speechSynthesis);
-
-  const containerRef = useRef<HTMLDivElement>(null);
-  const animFrameRef = useRef<number>();
 
   // Character is static - no walking animation needed
 
