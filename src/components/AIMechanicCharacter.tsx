@@ -327,7 +327,7 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
   const isInteracting = state === "chatting" || state === "listening" || state === "responding";
 
   return (
-    <div ref={containerRef} className="fixed bottom-0 left-0 right-0 z-40 pointer-events-none" style={{ height: "140px" }}>
+    <div ref={containerRef} className="fixed bottom-0 left-0 right-0 z-40 pointer-events-none overflow-hidden" style={{ height: "140px" }}>
       {/* Idle hint */}
       {showHint && state === "walking" && (
         <div
