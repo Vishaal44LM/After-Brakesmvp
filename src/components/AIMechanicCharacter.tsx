@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { MessageCircle, Mic, X, Send, Loader2, Volume2, MicOff, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import mechanicWalkGif from "@/assets/mechanic_walk.gif";
+import mechanicStatic from "@/assets/mechanic_static.png";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -333,7 +333,7 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
           <div className="bg-card border border-border rounded-t-xl sm:rounded-xl shadow-2xl overflow-hidden flex flex-col" style={{ maxHeight: "70vh" }}>
             <div className="p-3 border-b border-border flex items-center justify-between bg-primary/5">
               <div className="flex items-center gap-2">
-                <img src={mechanicWalkGif} alt="AI Mechanic" className="h-8 w-8 rounded-full object-cover bg-muted" />
+                <img src={mechanicStatic} alt="AI Mechanic" className="h-8 w-8 rounded-full object-cover bg-muted" />
                 <div>
                   <h3 className="text-sm font-semibold text-foreground">AI Mechanic - Text Chat</h3>
                   <p className="text-[10px] text-muted-foreground">
@@ -356,7 +356,7 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
               {chatMessages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} gap-2`}>
                   {msg.role === "assistant" && (
-                    <img src={mechanicWalkGif} alt="" className="h-6 w-6 rounded-full object-cover bg-muted shrink-0 mt-1" />
+                    <img src={mechanicStatic} alt="" className="h-6 w-6 rounded-full object-cover bg-muted shrink-0 mt-1" />
                   )}
                   <div className={`max-w-[80%] rounded-xl px-3 py-2 text-xs ${
                     msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
@@ -367,7 +367,7 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
               ))}
               {typingText && (
                 <div className="flex justify-start gap-2">
-                  <img src={mechanicWalkGif} alt="" className="h-6 w-6 rounded-full object-cover bg-muted shrink-0 mt-1" />
+                  <img src={mechanicStatic} alt="" className="h-6 w-6 rounded-full object-cover bg-muted shrink-0 mt-1" />
                   <div className="max-w-[80%] rounded-xl px-3 py-2 text-xs bg-secondary text-foreground">
                     {typingText}<span className="animate-pulse">|</span>
                   </div>
@@ -375,7 +375,7 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
               )}
               {(chatLoading && !typingText) && (
                 <div className="flex justify-start gap-2">
-                  <img src={mechanicWalkGif} alt="" className="h-6 w-6 rounded-full object-cover bg-muted shrink-0 mt-1" />
+                  <img src={mechanicStatic} alt="" className="h-6 w-6 rounded-full object-cover bg-muted shrink-0 mt-1" />
                   <div className="bg-secondary rounded-xl px-3 py-2">
                     <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
                   </div>
@@ -406,7 +406,7 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
           <div className="bg-card border border-border rounded-t-xl sm:rounded-xl shadow-2xl overflow-hidden flex flex-col" style={{ maxHeight: "70vh" }}>
             <div className="p-3 border-b border-border flex items-center justify-between bg-primary/5">
               <div className="flex items-center gap-2">
-                <img src={mechanicWalkGif} alt="AI Mechanic" className="h-8 w-8 rounded-full object-cover bg-muted" />
+                <img src={mechanicStatic} alt="AI Mechanic" className="h-8 w-8 rounded-full object-cover bg-muted" />
                 <div>
                   <h3 className="text-sm font-semibold text-foreground">AI Mechanic - Voice</h3>
                   <p className="text-[10px] text-muted-foreground">
@@ -430,7 +430,7 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
               {chatMessages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} gap-2`}>
                   {msg.role === "assistant" && (
-                    <img src={mechanicWalkGif} alt="" className="h-6 w-6 rounded-full object-cover bg-muted shrink-0 mt-1" />
+                    <img src={mechanicStatic} alt="" className="h-6 w-6 rounded-full object-cover bg-muted shrink-0 mt-1" />
                   )}
                   <div className={`max-w-[80%] rounded-xl px-3 py-2 text-xs ${
                     msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
@@ -442,7 +442,7 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
               ))}
               {isProcessing && (
                 <div className="flex justify-start gap-2">
-                  <img src={mechanicWalkGif} alt="" className="h-6 w-6 rounded-full object-cover bg-muted shrink-0 mt-1" />
+                  <img src={mechanicStatic} alt="" className="h-6 w-6 rounded-full object-cover bg-muted shrink-0 mt-1" />
                   <div className="bg-secondary rounded-xl px-3 py-2">
                     <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
                   </div>
@@ -497,7 +497,7 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
           <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-14 h-2.5 bg-foreground/20 rounded-full blur-sm" />
           {/* Character image - static */}
           <img
-            src={mechanicWalkGif}
+            src={mechanicStatic}
             alt="AI Mechanic"
             className={`h-16 sm:h-20 w-auto drop-shadow-lg ${
               state === "responding"
