@@ -40,42 +40,7 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
   const containerRef = useRef<HTMLDivElement>(null);
   const animFrameRef = useRef<number>();
 
-  // Walking animation
-  useEffect(() => {
-    if (state !== "walking") {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      return;
-    }
-
-    const CHAR_WIDTH = 80; // approx character width (h-20)
-    const PADDING = 12;
-    let pos = position;
-    let dir = direction;
-    const speed = 0.4;
-
-    const animate = () => {
-      const container = containerRef.current;
-      if (!container) return;
-      const maxPos = Math.max(PADDING, container.offsetWidth - CHAR_WIDTH - PADDING);
-
-      // Clamp in case container resized
-      if (pos > maxPos) pos = maxPos;
-      if (pos < PADDING) pos = PADDING;
-
-      if (dir === "right") {
-        pos += speed;
-        if (pos >= maxPos) { pos = maxPos; dir = "left"; setDirection("left"); }
-      } else {
-        pos -= speed;
-        if (pos <= PADDING) { pos = PADDING; dir = "right"; setDirection("right"); }
-      }
-      setPosition(pos);
-      animFrameRef.current = requestAnimationFrame(animate);
-    };
-
-    animFrameRef.current = requestAnimationFrame(animate);
-    return () => { if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current); };
-  }, [state]);
+  // Character is static - no walking animation needed
 
   // Idle hint timer
   useEffect(() => {
