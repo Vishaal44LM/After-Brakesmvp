@@ -490,45 +490,39 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
         </div>
       )}
 
-      {/* Character */}
+      {/* Static Character - fixed bottom-left */}
       <div
-        className={`absolute bottom-2 pointer-events-auto cursor-pointer transition-transform duration-200 ${
-          state === "focused" ? "scale-125" : isInteracting ? "scale-100" : "hover:scale-110"
+        className={`fixed bottom-3 left-3 sm:left-6 z-40 pointer-events-auto cursor-pointer transition-all duration-300 ${
+          state === "focused" ? "scale-110" : isInteracting ? "scale-90 opacity-70" : "hover:scale-105"
         }`}
-        style={{
-          left: isInteracting ? "16px" : `${position}px`,
-          transition: isInteracting ? "left 0.5s ease-in-out" : undefined,
-        }}
         onClick={state === "walking" ? handleCharacterClick : undefined}
       >
         <div className="relative">
           {/* Shadow */}
-          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-16 h-3 bg-foreground/10 rounded-full blur-sm" />
-          {/* Character image */}
+          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-14 h-2.5 bg-foreground/20 rounded-full blur-sm" />
+          {/* Character image - static */}
           <img
             src={mechanicWalkGif}
             alt="AI Mechanic"
-            className={`h-20 w-auto drop-shadow-lg ${
-              state === "walking"
-                ? "animate-[bounce_0.6s_ease-in-out_infinite]"
-                : state === "responding"
+            className={`h-16 sm:h-20 w-auto drop-shadow-lg ${
+              state === "responding"
                 ? "animate-pulse"
                 : state === "listening"
                 ? "animate-pulse-glow rounded-full"
                 : ""
             }`}
-            style={{
-              transform: direction === "left" ? "scaleX(-1)" : "scaleX(1)",
-              animationDuration: state === "walking" ? "0.6s" : undefined,
-            }}
           />
           {/* Glow when listening */}
           {state === "listening" && (
             <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
           )}
+          {/* Subtle indicator dot when idle */}
+          {state === "walking" && (
+            <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-primary animate-pulse border-2 border-background" />
+          )}
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
