@@ -123,7 +123,7 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
     return () => clearInterval(interval);
   }, []);
 
-  // Text Chat
+  // Text Chat (direct fetch for SSE streaming)
   const handleSendChat = async () => {
     if (!chatInput.trim() || chatLoading) return;
     const userMsg = { role: "user" as const, content: chatInput.trim() };
@@ -132,49 +132,74 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
     setChatInput("");
     setChatLoading(true);
     setState("responding");
+    setTypingText("");
 
     const vehicleInfo = vehicles.map((v: any) => `${v.vehicle_type} ${v.vehicle_brand || ""} ${v.vehicle_model || ""}`).join(", ");
 
     try {
-      const res = await supabase.functions.invoke("ai-chat", {
-        body: {
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+      const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const { data: { session } } = await supabase.auth.getSession();
+      const authHeader = session?.access_token ? `Bearer ${session.access_token}` : `Bearer ${SUPABASE_ANON_KEY}`;
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/ai-chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": authHeader,
+          "apikey": SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
           messages: newMessages,
           userContext: { area: profile?.area, vehicles: vehicleInfo },
-        },
+        }),
       });
 
-      if (res.error) throw res.error;
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText || `Request failed: ${response.status}`);
+      }
 
-      // Handle streaming response
-      const reader = res.data?.getReader?.();
-      if (reader) {
-        let fullText = "";
-        const decoder = new TextDecoder();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n").filter(l => l.startsWith("data: "));
-          for (const line of lines) {
-            const jsonStr = line.replace("data: ", "");
-            if (jsonStr === "[DONE]") continue;
-            try {
-              const parsed = JSON.parse(jsonStr);
-              const delta = parsed.choices?.[0]?.delta?.content || "";
+      if (!response.body) throw new Error("No response body");
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = "";
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:")) continue;
+          const jsonStr = trimmed.slice(5).trim();
+          if (!jsonStr || jsonStr === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const delta = parsed.choices?.[0]?.delta?.content || "";
+            if (delta) {
               fullText += delta;
               setTypingText(fullText.replace(/\*+/g, ""));
-            } catch {}
-          }
+            }
+          } catch {}
         }
-        const cleanText = fullText.replace(/\*+/g, "");
-        setChatMessages(prev => [...prev, { role: "assistant", content: cleanText }]);
-        setTypingText("");
-      } else {
-        const text = typeof res.data === "string" ? res.data : JSON.stringify(res.data);
-        setChatMessages(prev => [...prev, { role: "assistant", content: text.replace(/\*+/g, "") }]);
       }
+
+      const cleanText = fullText.replace(/\*+/g, "").trim();
+      if (cleanText) {
+        setChatMessages(prev => [...prev, { role: "assistant", content: cleanText }]);
+      } else {
+        setChatMessages(prev => [...prev, { role: "assistant", content: "Sorry, I couldn't generate a response. Please try rephrasing your question." }]);
+      }
+      setTypingText("");
     } catch (e: any) {
+      console.error("AI chat error:", e);
       toast.error(e.message || "AI error");
+      setChatMessages(prev => [...prev, { role: "assistant", content: "Sorry, I'm having trouble right now. Please try again in a moment." }]);
     } finally {
       setChatLoading(false);
       setState("chatting");
