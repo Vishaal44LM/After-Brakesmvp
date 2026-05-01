@@ -47,21 +47,27 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
       return;
     }
 
+    const CHAR_WIDTH = 80; // approx character width (h-20)
+    const PADDING = 12;
     let pos = position;
     let dir = direction;
-    const speed = 0.3;
+    const speed = 0.4;
 
     const animate = () => {
       const container = containerRef.current;
       if (!container) return;
-      const maxPos = container.offsetWidth - 100;
+      const maxPos = Math.max(PADDING, container.offsetWidth - CHAR_WIDTH - PADDING);
+
+      // Clamp in case container resized
+      if (pos > maxPos) pos = maxPos;
+      if (pos < PADDING) pos = PADDING;
 
       if (dir === "right") {
         pos += speed;
-        if (pos >= maxPos) { dir = "left"; setDirection("left"); }
+        if (pos >= maxPos) { pos = maxPos; dir = "left"; setDirection("left"); }
       } else {
         pos -= speed;
-        if (pos <= 10) { dir = "right"; setDirection("right"); }
+        if (pos <= PADDING) { pos = PADDING; dir = "right"; setDirection("right"); }
       }
       setPosition(pos);
       animFrameRef.current = requestAnimationFrame(animate);
@@ -123,7 +129,7 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
     return () => clearInterval(interval);
   }, []);
 
-  // Text Chat
+  // Text Chat (direct fetch for SSE streaming)
   const handleSendChat = async () => {
     if (!chatInput.trim() || chatLoading) return;
     const userMsg = { role: "user" as const, content: chatInput.trim() };
@@ -132,49 +138,74 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
     setChatInput("");
     setChatLoading(true);
     setState("responding");
+    setTypingText("");
 
     const vehicleInfo = vehicles.map((v: any) => `${v.vehicle_type} ${v.vehicle_brand || ""} ${v.vehicle_model || ""}`).join(", ");
 
     try {
-      const res = await supabase.functions.invoke("ai-chat", {
-        body: {
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+      const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const { data: { session } } = await supabase.auth.getSession();
+      const authHeader = session?.access_token ? `Bearer ${session.access_token}` : `Bearer ${SUPABASE_ANON_KEY}`;
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/ai-chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": authHeader,
+          "apikey": SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
           messages: newMessages,
           userContext: { area: profile?.area, vehicles: vehicleInfo },
-        },
+        }),
       });
 
-      if (res.error) throw res.error;
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText || `Request failed: ${response.status}`);
+      }
 
-      // Handle streaming response
-      const reader = res.data?.getReader?.();
-      if (reader) {
-        let fullText = "";
-        const decoder = new TextDecoder();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n").filter(l => l.startsWith("data: "));
-          for (const line of lines) {
-            const jsonStr = line.replace("data: ", "");
-            if (jsonStr === "[DONE]") continue;
-            try {
-              const parsed = JSON.parse(jsonStr);
-              const delta = parsed.choices?.[0]?.delta?.content || "";
+      if (!response.body) throw new Error("No response body");
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = "";
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:")) continue;
+          const jsonStr = trimmed.slice(5).trim();
+          if (!jsonStr || jsonStr === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const delta = parsed.choices?.[0]?.delta?.content || "";
+            if (delta) {
               fullText += delta;
               setTypingText(fullText.replace(/\*+/g, ""));
-            } catch {}
-          }
+            }
+          } catch {}
         }
-        const cleanText = fullText.replace(/\*+/g, "");
-        setChatMessages(prev => [...prev, { role: "assistant", content: cleanText }]);
-        setTypingText("");
-      } else {
-        const text = typeof res.data === "string" ? res.data : JSON.stringify(res.data);
-        setChatMessages(prev => [...prev, { role: "assistant", content: text.replace(/\*+/g, "") }]);
       }
+
+      const cleanText = fullText.replace(/\*+/g, "").trim();
+      if (cleanText) {
+        setChatMessages(prev => [...prev, { role: "assistant", content: cleanText }]);
+      } else {
+        setChatMessages(prev => [...prev, { role: "assistant", content: "Sorry, I couldn't generate a response. Please try rephrasing your question." }]);
+      }
+      setTypingText("");
     } catch (e: any) {
+      console.error("AI chat error:", e);
       toast.error(e.message || "AI error");
+      setChatMessages(prev => [...prev, { role: "assistant", content: "Sorry, I'm having trouble right now. Please try again in a moment." }]);
     } finally {
       setChatLoading(false);
       setState("chatting");
@@ -220,34 +251,63 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
     }
   }, [chatMessages, profile, vehicles, speak]);
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) { toast.error("Speech recognition not supported. Use Chrome."); return; }
+    if (!SpeechRecognition) {
+      toast.error("Voice not supported on this browser. Try Chrome on desktop or Android.");
+      setState("chatting");
+      return;
+    }
+
+    // Request mic permission explicitly (helps on mobile)
+    try {
+      if (navigator.mediaDevices?.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(t => t.stop());
+      }
+    } catch (err: any) {
+      toast.error("Microphone access denied. Please allow mic access in browser settings.");
+      setState("chatting");
+      return;
+    }
 
     synthRef.current.cancel();
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = "en-IN";
 
-    recognition.onstart = () => { setIsListening(true); setState("listening"); };
-    recognition.onresult = (event: any) => {
-      const result = event.results[event.results.length - 1];
-      setTranscript(result[0].transcript);
-      if (result.isFinal) {
-        const finalText = result[0].transcript;
-        setTranscript("");
-        sendVoiceToAI(finalText);
-      }
-    };
-    recognition.onerror = (e: any) => {
-      setIsListening(false);
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+      recognition.lang = "en-IN";
+
+      recognition.onstart = () => { setIsListening(true); setState("listening"); };
+      recognition.onresult = (event: any) => {
+        const result = event.results[event.results.length - 1];
+        setTranscript(result[0].transcript);
+        if (result.isFinal) {
+          const finalText = result[0].transcript;
+          setTranscript("");
+          sendVoiceToAI(finalText);
+        }
+      };
+      recognition.onerror = (e: any) => {
+        setIsListening(false);
+        setState("chatting");
+        if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+          toast.error("Microphone permission denied.");
+        } else if (e.error === "no-speech") {
+          toast.error("No speech detected. Tap mic and try again.");
+        } else if (e.error !== "aborted") {
+          toast.error("Voice error. Try again.");
+        }
+      };
+      recognition.onend = () => setIsListening(false);
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err: any) {
+      toast.error("Could not start voice recognition.");
       setState("chatting");
-      if (e.error !== "aborted") toast.error("Could not hear you. Try again.");
-    };
-    recognition.onend = () => setIsListening(false);
-    recognitionRef.current = recognition;
-    recognition.start();
+    }
   }, [sendVoiceToAI]);
 
   const stopListening = useCallback(() => {
@@ -267,7 +327,7 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
   const isInteracting = state === "chatting" || state === "listening" || state === "responding";
 
   return (
-    <div ref={containerRef} className="fixed bottom-0 left-0 right-0 z-40 pointer-events-none" style={{ height: "140px" }}>
+    <div ref={containerRef} className="fixed bottom-0 left-0 right-0 z-40 pointer-events-none overflow-hidden" style={{ height: "140px" }}>
       {/* Idle hint */}
       {showHint && state === "walking" && (
         <div
