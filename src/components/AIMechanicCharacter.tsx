@@ -47,21 +47,27 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
       return;
     }
 
+    const CHAR_WIDTH = 80; // approx character width (h-20)
+    const PADDING = 12;
     let pos = position;
     let dir = direction;
-    const speed = 0.3;
+    const speed = 0.4;
 
     const animate = () => {
       const container = containerRef.current;
       if (!container) return;
-      const maxPos = container.offsetWidth - 100;
+      const maxPos = Math.max(PADDING, container.offsetWidth - CHAR_WIDTH - PADDING);
+
+      // Clamp in case container resized
+      if (pos > maxPos) pos = maxPos;
+      if (pos < PADDING) pos = PADDING;
 
       if (dir === "right") {
         pos += speed;
-        if (pos >= maxPos) { dir = "left"; setDirection("left"); }
+        if (pos >= maxPos) { pos = maxPos; dir = "left"; setDirection("left"); }
       } else {
         pos -= speed;
-        if (pos <= 10) { dir = "right"; setDirection("right"); }
+        if (pos <= PADDING) { pos = PADDING; dir = "right"; setDirection("right"); }
       }
       setPosition(pos);
       animFrameRef.current = requestAnimationFrame(animate);
