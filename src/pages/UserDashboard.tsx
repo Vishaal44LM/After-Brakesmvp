@@ -593,7 +593,7 @@ const UserDashboard = () => {
             <TabsTrigger value="report" className="text-xs">Report</TabsTrigger>
             <TabsTrigger value="responses" className="text-xs">Quotes</TabsTrigger>
             <TabsTrigger value="find-mechanic" className="text-xs">Find</TabsTrigger>
-            <TabsTrigger value="garage" className="text-xs">Garage</TabsTrigger>
+            <TabsTrigger value="garage" className="text-xs">Glove Box</TabsTrigger>
             <TabsTrigger value="profile" className="text-xs">Profile</TabsTrigger>
           </TabsList>
 
