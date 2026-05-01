@@ -267,7 +267,7 @@ const DigitalGarage = ({ user, vehicles }: { user: any; vehicles: any[] }) => {
     <section className="space-y-4">
       <div className="bg-card rounded-xl border border-border p-5 animate-slide-up">
         <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-          <FolderOpen className="h-5 w-5 text-primary" /> Digital Garage
+          <FolderOpen className="h-5 w-5 text-primary" /> Glove Box
         </h2>
         <p className="text-xs text-muted-foreground mb-4">Store service history, insurance, RC & pollution certificates. Valuable when selling your vehicle.</p>
 
