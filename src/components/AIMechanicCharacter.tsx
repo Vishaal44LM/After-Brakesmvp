@@ -15,8 +15,6 @@ interface AIMechanicCharacterProps {
 
 const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) => {
   const [state, setState] = useState<CharacterState>("walking");
-  const [position, setPosition] = useState(20);
-  const [direction, setDirection] = useState<"right" | "left">("right");
   const [showBubble, setShowBubble] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [activeMode, setActiveMode] = useState<"chat" | "voice" | null>(null);
@@ -37,45 +35,7 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
   const recognitionRef = useRef<any>(null);
   const synthRef = useRef(window.speechSynthesis);
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const animFrameRef = useRef<number>();
-
-  // Walking animation
-  useEffect(() => {
-    if (state !== "walking") {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      return;
-    }
-
-    const CHAR_WIDTH = 80; // approx character width (h-20)
-    const PADDING = 12;
-    let pos = position;
-    let dir = direction;
-    const speed = 0.4;
-
-    const animate = () => {
-      const container = containerRef.current;
-      if (!container) return;
-      const maxPos = Math.max(PADDING, container.offsetWidth - CHAR_WIDTH - PADDING);
-
-      // Clamp in case container resized
-      if (pos > maxPos) pos = maxPos;
-      if (pos < PADDING) pos = PADDING;
-
-      if (dir === "right") {
-        pos += speed;
-        if (pos >= maxPos) { pos = maxPos; dir = "left"; setDirection("left"); }
-      } else {
-        pos -= speed;
-        if (pos <= PADDING) { pos = PADDING; dir = "right"; setDirection("right"); }
-      }
-      setPosition(pos);
-      animFrameRef.current = requestAnimationFrame(animate);
-    };
-
-    animFrameRef.current = requestAnimationFrame(animate);
-    return () => { if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current); };
-  }, [state]);
+  // Character is static - no walking animation needed
 
   // Idle hint timer
   useEffect(() => {
@@ -327,20 +287,17 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
   const isInteracting = state === "chatting" || state === "listening" || state === "responding";
 
   return (
-    <div ref={containerRef} className="fixed bottom-0 left-0 right-0 z-40 pointer-events-none overflow-hidden" style={{ height: "140px" }}>
-      {/* Idle hint */}
+    <>
+      {/* Idle hint - positioned above the static character */}
       {showHint && state === "walking" && (
-        <div
-          className="absolute pointer-events-auto animate-fade-in"
-          style={{ left: `${position}px`, bottom: "110px", transform: "translateX(-20px)" }}
-        >
-          <div className="bg-card border border-border rounded-xl px-3 py-2 shadow-lg relative max-w-[200px]">
+        <div className="fixed left-4 sm:left-6 bottom-[120px] z-50 pointer-events-auto animate-fade-in">
+          <div className="bg-card border border-border rounded-xl px-3 py-2 shadow-lg relative max-w-[220px]">
             <p className="text-xs text-foreground font-medium">Need help with your vehicle?</p>
             <div className="flex gap-1 mt-1.5">
-              <Button size="sm" variant="default" className="text-[10px] h-6 px-2 pointer-events-auto" onClick={() => { setShowHint(false); handleCharacterClick(); }}>
+              <Button size="sm" variant="default" className="text-[10px] h-6 px-2" onClick={() => { setShowHint(false); handleCharacterClick(); }}>
                 Yes!
               </Button>
-              <Button size="sm" variant="ghost" className="text-[10px] h-6 px-2 pointer-events-auto" onClick={() => setShowHint(false)}>
+              <Button size="sm" variant="ghost" className="text-[10px] h-6 px-2" onClick={() => setShowHint(false)}>
                 Later
               </Button>
             </div>
@@ -349,17 +306,14 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
         </div>
       )}
 
-      {/* Choice bubble */}
+      {/* Choice bubble - positioned above the static character */}
       {showBubble && state === "focused" && (
-        <div
-          className="absolute pointer-events-auto animate-fade-in"
-          style={{ left: `${Math.min(Math.max(position, 30), (containerRef.current?.offsetWidth || 300) - 220)}px`, bottom: "115px" }}
-        >
-          <div className="bg-card border border-primary/30 rounded-xl p-3 shadow-lg glow-primary relative min-w-[200px]">
+        <div className="fixed left-4 sm:left-6 bottom-[120px] z-50 pointer-events-auto animate-fade-in">
+          <div className="bg-card border border-primary/30 rounded-xl p-3 shadow-lg glow-primary relative w-[240px] max-w-[calc(100vw-2rem)]">
             <button onClick={handleClose} className="absolute top-1.5 right-1.5 text-muted-foreground hover:text-foreground">
               <X className="h-3.5 w-3.5" />
             </button>
-            <p className="text-sm text-foreground font-medium mb-2.5 pr-4">Do you want to talk with AI Mechanic?</p>
+            <p className="text-sm text-foreground font-medium mb-2.5 pr-4">Talk with AI Mechanic?</p>
             <div className="flex flex-col gap-1.5">
               <Button size="sm" className="w-full justify-start text-xs h-8" onClick={() => selectMode("chat")}>
                 <MessageCircle className="h-3.5 w-3.5 mr-1.5" /> Text Chat
@@ -531,45 +485,39 @@ const AIMechanicCharacter = ({ profile, vehicles }: AIMechanicCharacterProps) =>
         </div>
       )}
 
-      {/* Character */}
+      {/* Static Character - fixed bottom-left */}
       <div
-        className={`absolute bottom-2 pointer-events-auto cursor-pointer transition-transform duration-200 ${
-          state === "focused" ? "scale-125" : isInteracting ? "scale-100" : "hover:scale-110"
+        className={`fixed bottom-3 left-3 sm:left-6 z-40 pointer-events-auto cursor-pointer transition-all duration-300 ${
+          state === "focused" ? "scale-110" : isInteracting ? "scale-90 opacity-70" : "hover:scale-105"
         }`}
-        style={{
-          left: isInteracting ? "16px" : `${position}px`,
-          transition: isInteracting ? "left 0.5s ease-in-out" : undefined,
-        }}
         onClick={state === "walking" ? handleCharacterClick : undefined}
       >
         <div className="relative">
           {/* Shadow */}
-          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-16 h-3 bg-foreground/10 rounded-full blur-sm" />
-          {/* Character image */}
+          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-14 h-2.5 bg-foreground/20 rounded-full blur-sm" />
+          {/* Character image - static */}
           <img
             src={mechanicWalkGif}
             alt="AI Mechanic"
-            className={`h-20 w-auto drop-shadow-lg ${
-              state === "walking"
-                ? "animate-[bounce_0.6s_ease-in-out_infinite]"
-                : state === "responding"
+            className={`h-16 sm:h-20 w-auto drop-shadow-lg ${
+              state === "responding"
                 ? "animate-pulse"
                 : state === "listening"
                 ? "animate-pulse-glow rounded-full"
                 : ""
             }`}
-            style={{
-              transform: direction === "left" ? "scaleX(-1)" : "scaleX(1)",
-              animationDuration: state === "walking" ? "0.6s" : undefined,
-            }}
           />
           {/* Glow when listening */}
           {state === "listening" && (
             <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
           )}
+          {/* Subtle indicator dot when idle */}
+          {state === "walking" && (
+            <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-primary animate-pulse border-2 border-background" />
+          )}
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
