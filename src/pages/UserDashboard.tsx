@@ -751,6 +751,11 @@ const UserDashboard = () => {
             <FindMechanicSection user={user} vehicles={vehicles} />
           </TabsContent>
 
+          {/* NEARBY ETA TAB */}
+          <TabsContent value="nearby" className="space-y-4 mt-4">
+            <NearbyMechanicETA />
+          </TabsContent>
+
           {/* DIGITAL GARAGE TAB */}
           <TabsContent value="garage" className="space-y-4 mt-4">
             {user && <DigitalGarage user={user} vehicles={vehicles} />}
