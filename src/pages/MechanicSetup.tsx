@@ -173,6 +173,13 @@ const MechanicSetup = () => {
             <Textarea value={garageAddress} onChange={(e) => setGarageAddress(e.target.value)} placeholder="Full garage address" className="bg-secondary border-0 min-h-[60px]" />
           </div>
           <div>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><MapPin className="h-4 w-4" /> Garage Location <span className="text-xs">(for ETA)</span></label>
+            <Button type="button" variant="secondary" onClick={captureLocation} disabled={capturingLoc} className="w-full">
+              {capturingLoc ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <MapPin className="h-4 w-4 mr-2" />}
+              {coords ? `Captured (${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)})` : "Use my current location"}
+            </Button>
+          </div>
+          <div>
             <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><Link className="h-4 w-4" /> Google Maps Link <span className="text-xs">(optional)</span></label>
             <Input value={googleMapsLink} onChange={(e) => setGoogleMapsLink(e.target.value)} placeholder="https://maps.google.com/..." className="bg-secondary border-0" />
           </div>
