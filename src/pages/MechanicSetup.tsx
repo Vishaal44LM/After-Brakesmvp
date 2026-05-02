@@ -114,6 +114,8 @@ const MechanicSetup = () => {
         id_proof_url: idProofUrl,
         id_proof_verified: false,
         phone_number: phoneNumber || null,
+        latitude: coords?.lat ?? null,
+        longitude: coords?.lng ?? null,
       } as any);
       if (error) throw error;
 
