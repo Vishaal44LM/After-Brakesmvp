@@ -25,6 +25,25 @@ const MechanicSetup = () => {
   const [idProofFile, setIdProofFile] = useState<File | null>(null);
   const [idProofPreview, setIdProofPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [capturingLoc, setCapturingLoc] = useState(false);
+
+  const captureLocation = () => {
+    if (!navigator.geolocation) { toast.error("Geolocation not supported"); return; }
+    setCapturingLoc(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setCapturingLoc(false);
+        toast.success("Location captured");
+      },
+      (err) => {
+        setCapturingLoc(false);
+        toast.error(err.code === err.PERMISSION_DENIED ? "Permission denied" : "Could not get location");
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -95,6 +114,8 @@ const MechanicSetup = () => {
         id_proof_url: idProofUrl,
         id_proof_verified: false,
         phone_number: phoneNumber || null,
+        latitude: coords?.lat ?? null,
+        longitude: coords?.lng ?? null,
       } as any);
       if (error) throw error;
 
@@ -150,6 +171,13 @@ const MechanicSetup = () => {
           <div>
             <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><MapPin className="h-4 w-4" /> Garage Address <span className="text-destructive">*</span></label>
             <Textarea value={garageAddress} onChange={(e) => setGarageAddress(e.target.value)} placeholder="Full garage address" className="bg-secondary border-0 min-h-[60px]" />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><MapPin className="h-4 w-4" /> Garage Location <span className="text-xs">(for ETA)</span></label>
+            <Button type="button" variant="secondary" onClick={captureLocation} disabled={capturingLoc} className="w-full">
+              {capturingLoc ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <MapPin className="h-4 w-4 mr-2" />}
+              {coords ? `Captured (${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)})` : "Use my current location"}
+            </Button>
           </div>
           <div>
             <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><Link className="h-4 w-4" /> Google Maps Link <span className="text-xs">(optional)</span></label>

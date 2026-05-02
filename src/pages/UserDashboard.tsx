@@ -12,6 +12,7 @@ import {
   FolderOpen, FileText, Shield, Leaf, CalendarDays
 } from "lucide-react";
 import AIMechanicCharacter from "@/components/AIMechanicCharacter";
+import NearbyMechanicETA from "@/components/NearbyMechanicETA";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -589,12 +590,13 @@ const UserDashboard = () => {
       <Navbar role="user" onLogout={handleLogout} />
       <div className="container max-w-2xl py-4 px-4">
         <Tabs defaultValue="report" className="w-full">
-          <TabsList className="grid w-full grid-cols-5 bg-secondary">
-            <TabsTrigger value="report" className="text-xs">Report</TabsTrigger>
-            <TabsTrigger value="responses" className="text-xs">Quotes</TabsTrigger>
-            <TabsTrigger value="find-mechanic" className="text-xs">Find</TabsTrigger>
-            <TabsTrigger value="garage" className="text-xs">Glove Box</TabsTrigger>
-            <TabsTrigger value="profile" className="text-xs">Profile</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-6 bg-secondary">
+            <TabsTrigger value="report" className="text-[10px] sm:text-xs">Report</TabsTrigger>
+            <TabsTrigger value="responses" className="text-[10px] sm:text-xs">Quotes</TabsTrigger>
+            <TabsTrigger value="find-mechanic" className="text-[10px] sm:text-xs">Find</TabsTrigger>
+            <TabsTrigger value="nearby" className="text-[10px] sm:text-xs">Nearby</TabsTrigger>
+            <TabsTrigger value="garage" className="text-[10px] sm:text-xs">Glove Box</TabsTrigger>
+            <TabsTrigger value="profile" className="text-[10px] sm:text-xs">Profile</TabsTrigger>
           </TabsList>
 
           {/* REPORT ISSUE TAB */}
@@ -748,6 +750,11 @@ const UserDashboard = () => {
           {/* FIND MECHANIC TAB */}
           <TabsContent value="find-mechanic" className="space-y-4 mt-4">
             <FindMechanicSection user={user} vehicles={vehicles} />
+          </TabsContent>
+
+          {/* NEARBY ETA TAB */}
+          <TabsContent value="nearby" className="space-y-4 mt-4">
+            <NearbyMechanicETA />
           </TabsContent>
 
           {/* DIGITAL GARAGE TAB */}

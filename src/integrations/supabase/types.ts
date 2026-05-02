@@ -111,6 +111,8 @@ export type Database = {
           id: string
           id_proof_url: string | null
           id_proof_verified: boolean | null
+          latitude: number | null
+          longitude: number | null
           name: string
           phone_number: string | null
           pincode: string
@@ -130,6 +132,8 @@ export type Database = {
           id?: string
           id_proof_url?: string | null
           id_proof_verified?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
           name: string
           phone_number?: string | null
           pincode: string
@@ -149,6 +153,8 @@ export type Database = {
           id?: string
           id_proof_url?: string | null
           id_proof_verified?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
           name?: string
           phone_number?: string | null
           pincode?: string
