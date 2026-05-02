@@ -589,12 +589,13 @@ const UserDashboard = () => {
       <Navbar role="user" onLogout={handleLogout} />
       <div className="container max-w-2xl py-4 px-4">
         <Tabs defaultValue="report" className="w-full">
-          <TabsList className="grid w-full grid-cols-5 bg-secondary">
-            <TabsTrigger value="report" className="text-xs">Report</TabsTrigger>
-            <TabsTrigger value="responses" className="text-xs">Quotes</TabsTrigger>
-            <TabsTrigger value="find-mechanic" className="text-xs">Find</TabsTrigger>
-            <TabsTrigger value="garage" className="text-xs">Glove Box</TabsTrigger>
-            <TabsTrigger value="profile" className="text-xs">Profile</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-6 bg-secondary">
+            <TabsTrigger value="report" className="text-[10px] sm:text-xs">Report</TabsTrigger>
+            <TabsTrigger value="responses" className="text-[10px] sm:text-xs">Quotes</TabsTrigger>
+            <TabsTrigger value="find-mechanic" className="text-[10px] sm:text-xs">Find</TabsTrigger>
+            <TabsTrigger value="nearby" className="text-[10px] sm:text-xs">Nearby</TabsTrigger>
+            <TabsTrigger value="garage" className="text-[10px] sm:text-xs">Glove Box</TabsTrigger>
+            <TabsTrigger value="profile" className="text-[10px] sm:text-xs">Profile</TabsTrigger>
           </TabsList>
 
           {/* REPORT ISSUE TAB */}
