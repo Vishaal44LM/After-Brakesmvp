@@ -25,6 +25,25 @@ const MechanicSetup = () => {
   const [idProofFile, setIdProofFile] = useState<File | null>(null);
   const [idProofPreview, setIdProofPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [capturingLoc, setCapturingLoc] = useState(false);
+
+  const captureLocation = () => {
+    if (!navigator.geolocation) { toast.error("Geolocation not supported"); return; }
+    setCapturingLoc(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setCapturingLoc(false);
+        toast.success("Location captured");
+      },
+      (err) => {
+        setCapturingLoc(false);
+        toast.error(err.code === err.PERMISSION_DENIED ? "Permission denied" : "Could not get location");
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
