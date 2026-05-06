@@ -79,12 +79,21 @@ const MechanicDashboard = () => {
   };
 
   useEffect(() => {
-    if (user) {
-      fetchNearbyIssues();
-      fetchMyResponses();
-      fetchPhoneConsents();
-      fetchEmergencyAlerts();
-    }
+    if (!user) return;
+    fetchNearbyIssues();
+    fetchMyResponses();
+    fetchPhoneConsents();
+    fetchEmergencyAlerts();
+
+    const ch = supabase
+      .channel("emergency-alerts-feed")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "emergency_alerts" },
+        () => fetchEmergencyAlerts(),
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
   }, [user, mechanicProfile]);
 
   const fetchEmergencyAlerts = async () => {
