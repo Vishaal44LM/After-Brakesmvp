@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { chennaiAreas } from "@/data/chennaiAreas";
 import { useBroadcastMechanicLocation } from "@/hooks/useBroadcastMechanicLocation";
+import EmergencyAlertMap from "@/components/EmergencyAlertMap";
 
 const MechanicDashboard = () => {
   const navigate = useNavigate();
@@ -78,12 +79,21 @@ const MechanicDashboard = () => {
   };
 
   useEffect(() => {
-    if (user) {
-      fetchNearbyIssues();
-      fetchMyResponses();
-      fetchPhoneConsents();
-      fetchEmergencyAlerts();
-    }
+    if (!user) return;
+    fetchNearbyIssues();
+    fetchMyResponses();
+    fetchPhoneConsents();
+    fetchEmergencyAlerts();
+
+    const ch = supabase
+      .channel("emergency-alerts-feed")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "emergency_alerts" },
+        () => fetchEmergencyAlerts(),
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
   }, [user, mechanicProfile]);
 
   const fetchEmergencyAlerts = async () => {
@@ -292,6 +302,14 @@ const MechanicDashboard = () => {
                     <Car className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-foreground">{alert.vehicle_info || "Not specified"}</span>
                   </div>
+                </div>
+                <div className="mt-3">
+                  <EmergencyAlertMap
+                    alertId={alert.id}
+                    initialLat={alert.latitude}
+                    initialLng={alert.longitude}
+                    userName={alert.user_name}
+                  />
                 </div>
               </div>
             ))}
