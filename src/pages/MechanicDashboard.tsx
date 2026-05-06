@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { chennaiAreas } from "@/data/chennaiAreas";
 import { useBroadcastMechanicLocation } from "@/hooks/useBroadcastMechanicLocation";
+import EmergencyAlertMap from "@/components/EmergencyAlertMap";
 
 const MechanicDashboard = () => {
   const navigate = useNavigate();
