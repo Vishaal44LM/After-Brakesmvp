@@ -46,12 +46,27 @@ Deno.serve(async (req) => {
       });
     }
 
-    if ((typeof mechLng !== 'number' || typeof mechLat !== 'number') && mechAddress) {
-      const geo = await geocode(apiKey, mechAddress);
-      if (geo) { mechLng = geo[0]; mechLat = geo[1]; }
+    const mechArea: string | undefined = body?.mechArea;
+
+    if (typeof mechLng !== 'number' || typeof mechLat !== 'number') {
+      // Try multiple geocode candidates: full address, then area-only fallback
+      const candidates: string[] = [];
+      if (mechAddress) candidates.push(mechAddress);
+      if (mechArea) {
+        candidates.push(`${mechArea}, Chennai, Tamil Nadu, India`);
+        candidates.push(`${mechArea}, Chennai, India`);
+      }
+      for (const c of candidates) {
+        const cleaned = c.replace(/\s*,\s*,+/g, ',').replace(/^\s*,|,\s*$/g, '').trim();
+        if (!cleaned) continue;
+        console.log('Geocoding candidate:', cleaned);
+        const geo = await geocode(apiKey, cleaned);
+        if (geo) { mechLng = geo[0]; mechLat = geo[1]; break; }
+      }
     }
 
     if (typeof mechLng !== 'number' || typeof mechLat !== 'number') {
+      console.error('No mechanic coords resolved', { mechAddress, mechArea });
       return new Response(JSON.stringify({ error: 'Mechanic location unavailable' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
