@@ -21,6 +21,10 @@ const MechanicDashboard = () => {
   const navigate = useNavigate();
   const { user, mechanicProfile, signOut, refreshProfile } = useAuth();
 
+  // Broadcast live GPS while there is at least one accepted job
+  const [hasAcceptedJob, setHasAcceptedJob] = useState(false);
+  useBroadcastMechanicLocation(user?.id, hasAcceptedJob);
+
   const [nearbyIssues, setNearbyIssues] = useState<any[]>([]);
   const [loadingIssues, setLoadingIssues] = useState(false);
   const [respondingTo, setRespondingTo] = useState<string | null>(null);
