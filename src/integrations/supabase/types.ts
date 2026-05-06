@@ -18,6 +18,9 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          latitude: number | null
+          location_updated_at: string | null
+          longitude: number | null
           resolved_at: string | null
           status: string
           user_area: string | null
@@ -29,6 +32,9 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          latitude?: number | null
+          location_updated_at?: string | null
+          longitude?: number | null
           resolved_at?: string | null
           status?: string
           user_area?: string | null
@@ -40,6 +46,9 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          latitude?: number | null
+          location_updated_at?: string | null
+          longitude?: number | null
           resolved_at?: string | null
           status?: string
           user_area?: string | null
