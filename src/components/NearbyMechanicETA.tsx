@@ -149,7 +149,11 @@ export default function NearbyMechanicETA() {
         payload.mechLat = m.latitude;
         payload.mechLng = m.longitude;
       } else {
-        payload.mechAddress = `${m.garage_name}, ${m.garage_address || ""}, ${m.area}, Chennai, India`;
+        const addrParts = [m.garage_name, m.garage_address, m.area, "Chennai", "Tamil Nadu", "India"]
+          .filter(Boolean)
+          .join(", ");
+        payload.mechAddress = addrParts;
+        payload.mechArea = m.area;
       }
       const { data, error } = await supabase.functions.invoke("mechanic-eta", { body: payload });
       if (error) throw error;
