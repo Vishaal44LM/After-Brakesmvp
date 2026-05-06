@@ -15,10 +15,15 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { chennaiAreas } from "@/data/chennaiAreas";
+import { useBroadcastMechanicLocation } from "@/hooks/useBroadcastMechanicLocation";
 
 const MechanicDashboard = () => {
   const navigate = useNavigate();
   const { user, mechanicProfile, signOut, refreshProfile } = useAuth();
+
+  // Broadcast live GPS while there is at least one accepted job
+  const [hasAcceptedJob, setHasAcceptedJob] = useState(false);
+  useBroadcastMechanicLocation(user?.id, hasAcceptedJob);
 
   const [nearbyIssues, setNearbyIssues] = useState<any[]>([]);
   const [loadingIssues, setLoadingIssues] = useState(false);
@@ -139,9 +144,11 @@ const MechanicDashboard = () => {
       setRespondedIssueIds(new Set(issueIds));
       const { data: issuesData } = await supabase.from("issues").select("*").in("id", issueIds);
       setMyResponses(data.map((r: any) => ({ ...r, issue: issuesData?.find((i: any) => i.id === r.issue_id) })));
+      setHasAcceptedJob(data.some((r: any) => r.status === "accepted"));
     } else {
       setMyResponses([]);
       setRespondedIssueIds(new Set());
+      setHasAcceptedJob(false);
     }
     setLoadingMyResponses(false);
   };

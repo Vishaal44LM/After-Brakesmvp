@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import AIMechanicCharacter from "@/components/AIMechanicCharacter";
 import NearbyMechanicETA from "@/components/NearbyMechanicETA";
+import LiveMechanicTracker from "@/components/LiveMechanicTracker";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -733,14 +734,21 @@ const UserDashboard = () => {
                   </Button>
                 </div>
                 {r.status === "accepted" && (
-                  <div className="flex items-center gap-1 mt-3 pt-3 border-t border-border">
-                    <span className="text-xs text-muted-foreground mr-1">Rate Mechanic:</span>
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button key={star} onClick={() => handleRateResponse(r.id, star)} className="transition-transform hover:scale-125">
-                        <Star className={`h-5 w-5 ${(r.user_rating || 0) >= star ? "text-warning fill-warning" : "text-muted-foreground"}`} />
-                      </button>
-                    ))}
-                    {r.user_rating && <span className="text-xs text-muted-foreground ml-2">({r.user_rating}/5)</span>}
+                  <div className="mt-3 pt-3 border-t border-border space-y-3">
+                    <LiveMechanicTracker
+                      mechanicId={r.mechanic_id}
+                      mechanicName={r.mechanic?.garage_name}
+                      mechanicPhone={r.mechanic?.phone_number}
+                    />
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-muted-foreground mr-1">Rate Mechanic:</span>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button key={star} onClick={() => handleRateResponse(r.id, star)} className="transition-transform hover:scale-125">
+                          <Star className={`h-5 w-5 ${(r.user_rating || 0) >= star ? "text-warning fill-warning" : "text-muted-foreground"}`} />
+                        </button>
+                      ))}
+                      {r.user_rating && <span className="text-xs text-muted-foreground ml-2">({r.user_rating}/5)</span>}
+                    </div>
                   </div>
                 )}
               </div>

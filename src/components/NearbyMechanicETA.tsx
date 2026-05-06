@@ -210,7 +210,7 @@ export default function NearbyMechanicETA() {
                 className="rounded-t-lg"
               >
                 <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  attribution=""
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
                 <Marker position={userPos} icon={userIcon}>
