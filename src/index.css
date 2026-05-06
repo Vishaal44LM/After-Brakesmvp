@@ -106,3 +106,6 @@
 .animate-pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
 }
+
+/* Hide Leaflet attribution and OpenStreetMap label */
+.leaflet-control-attribution { display: none !important; }
