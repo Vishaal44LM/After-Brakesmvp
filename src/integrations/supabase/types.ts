@@ -100,6 +100,33 @@ export type Database = {
           },
         ]
       }
+      mechanic_locations: {
+        Row: {
+          heading: number | null
+          latitude: number
+          longitude: number
+          mechanic_id: string
+          speed: number | null
+          updated_at: string
+        }
+        Insert: {
+          heading?: number | null
+          latitude: number
+          longitude: number
+          mechanic_id: string
+          speed?: number | null
+          updated_at?: string
+        }
+        Update: {
+          heading?: number | null
+          latitude?: number
+          longitude?: number
+          mechanic_id?: string
+          speed?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       mechanic_profiles: {
         Row: {
           area: string
