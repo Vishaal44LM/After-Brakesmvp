@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import AIMechanicCharacter from "@/components/AIMechanicCharacter";
 import NearbyMechanicETA from "@/components/NearbyMechanicETA";
+import LiveMechanicTracker from "@/components/LiveMechanicTracker";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
