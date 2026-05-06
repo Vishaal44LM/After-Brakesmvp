@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { chennaiAreas } from "@/data/chennaiAreas";
+import { useBroadcastMechanicLocation } from "@/hooks/useBroadcastMechanicLocation";
 
 const MechanicDashboard = () => {
   const navigate = useNavigate();
