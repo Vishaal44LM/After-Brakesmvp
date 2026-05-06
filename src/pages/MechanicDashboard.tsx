@@ -294,6 +294,14 @@ const MechanicDashboard = () => {
                     <span className="text-sm text-foreground">{alert.vehicle_info || "Not specified"}</span>
                   </div>
                 </div>
+                <div className="mt-3">
+                  <EmergencyAlertMap
+                    alertId={alert.id}
+                    initialLat={alert.latitude}
+                    initialLng={alert.longitude}
+                    userName={alert.user_name}
+                  />
+                </div>
               </div>
             ))}
             <Button variant="outline" onClick={fetchEmergencyAlerts} className="w-full">
