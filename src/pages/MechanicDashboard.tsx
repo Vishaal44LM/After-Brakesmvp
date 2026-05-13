@@ -11,6 +11,7 @@ import {
   Clock, Star, Edit2, Save, Camera, Store, User, Phone, Search, Link, FileCheck,
   Siren
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -376,7 +377,7 @@ const MechanicDashboard = () => {
             {!loadingIssues && nearbyIssues.length === 0 && (
               <div className="text-center text-muted-foreground text-sm py-10">No issues found. Try changing your search filters.</div>
             )}
-            {nearbyIssues.map((issue: any) => (
+            {nearbyIssues.filter((i: any) => !hiddenIssueIds.has(i.id)).map((issue: any) => (
               <div key={issue.id} className="bg-card rounded-xl border border-border p-5 animate-slide-up">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
@@ -435,9 +436,14 @@ const MechanicDashboard = () => {
                       </div>
                     </div>
                   ) : (
-                    <Button size="sm" variant="outline" onClick={() => setRespondingTo(issue.id)}>
-                      <MessageCircle className="h-3 w-3 mr-1" /> Respond
-                    </Button>
+                    <>
+                      <Button size="sm" onClick={() => setRespondingTo(issue.id)}>
+                        <Check className="h-3 w-3 mr-1" /> Accept
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleRejectIssue(issue.id)}>
+                        Reject
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
