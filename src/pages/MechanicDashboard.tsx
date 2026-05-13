@@ -294,11 +294,10 @@ const MechanicDashboard = () => {
       <Navbar role="mechanic" onLogout={handleLogout} />
       <div className="container max-w-2xl py-4 px-4">
         <Tabs defaultValue="issues" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-secondary">
+          <TabsList className="grid w-full grid-cols-3 bg-secondary">
+            <TabsTrigger value="issues" className="text-xs">🛠️ Requests</TabsTrigger>
             <TabsTrigger value="emergency" className="text-xs text-destructive">🚨 SOS</TabsTrigger>
-            <TabsTrigger value="issues" className="text-xs">Issues</TabsTrigger>
-            <TabsTrigger value="responses" className="text-xs">Responses</TabsTrigger>
-            <TabsTrigger value="profile" className="text-xs">Profile</TabsTrigger>
+            <TabsTrigger value="profile" className="text-xs">👤 Profile</TabsTrigger>
           </TabsList>
 
           {/* EMERGENCY ALERTS */}
@@ -327,10 +326,10 @@ const MechanicDashboard = () => {
                     <MapPin className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-foreground">{alert.user_area || "Unknown Area"}</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <a href={`tel:${alert.user_phone || ""}`} className="flex items-center gap-2 hover:text-primary">
                     <Phone className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-success font-medium">+91 {alert.user_phone || "N/A"}</span>
-                  </div>
+                  </a>
                   <div className="flex items-center gap-2">
                     <Car className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-foreground">{alert.vehicle_info || "Not specified"}</span>
