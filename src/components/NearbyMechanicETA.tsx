@@ -144,7 +144,8 @@ export default function NearbyMechanicETA() {
       setLoadingMechs(true);
       const { data, error } = await supabase
         .from("mechanic_profiles")
-        .select("user_id,name,garage_name,area,garage_address,phone_number,rating,latitude,longitude");
+        .select("user_id,name,garage_name,area,garage_address,phone_number,rating,latitude,longitude,is_available")
+        .or("is_available.is.null,is_available.eq.true");
       if (error) {
         console.error(error);
         toast.error("Failed to load mechanics");
