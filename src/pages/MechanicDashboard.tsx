@@ -9,8 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Car, MapPin, AlertTriangle, IndianRupee, MessageCircle, Send, Loader2,
   Clock, Star, Edit2, Save, Camera, Store, User, Phone, Search, Link, FileCheck,
-  Siren
+  Siren, Check, Navigation
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -53,6 +54,9 @@ const MechanicDashboard = () => {
   const [garagePhoto, setGaragePhoto] = useState<File | null>(null);
   const [garagePhotoPreview, setGaragePhotoPreview] = useState<string | null>(mechanicProfile?.garage_photo_url || null);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [isAvailable, setIsAvailable] = useState(true);
+  const [savingAvailability, setSavingAvailability] = useState(false);
+  const [hiddenIssueIds, setHiddenIssueIds] = useState<Set<string>>(new Set());
 
   const [emergencyAlerts, setEmergencyAlerts] = useState<any[]>([]);
   const [loadingEmergencies, setLoadingEmergencies] = useState(false);
@@ -69,14 +73,44 @@ const MechanicDashboard = () => {
 
   const loadExtendedProfile = async () => {
     if (!user) return;
-    const { data } = await supabase.from("mechanic_profiles").select("garage_address, google_maps_link, years_of_experience, phone_number").eq("user_id", user.id).single();
+    const { data } = await supabase.from("mechanic_profiles").select("garage_address, google_maps_link, years_of_experience, phone_number, is_available").eq("user_id", user.id).single();
     if (data) {
       setEditAddress((data as any).garage_address || "");
       setEditMapsLink((data as any).google_maps_link || "");
       setEditExperience((data as any).years_of_experience?.toString() || "");
       setEditPhoneNumber((data as any).phone_number || "");
+      setIsAvailable((data as any).is_available !== false);
     }
   };
+
+  const toggleAvailability = async (next: boolean) => {
+    if (!user) return;
+    setSavingAvailability(true);
+    setIsAvailable(next);
+    try {
+      await supabase.from("mechanic_profiles").update({ is_available: next } as any).eq("user_id", user.id);
+      toast.success(next ? "You're now available" : "You're offline");
+    } catch (e: any) {
+      toast.error(e.message);
+      setIsAvailable(!next);
+    } finally {
+      setSavingAvailability(false);
+    }
+  };
+
+  const handleRejectIssue = (issueId: string) => {
+    setHiddenIssueIds((s) => new Set(s).add(issueId));
+    toast.success("Request dismissed");
+  };
+
+  const handleAcceptResponseAsAccepted = async (responseId: string) => {
+    try {
+      await supabase.from("mechanic_responses").update({ status: "accepted" } as any).eq("id", responseId);
+      toast.success("Job marked as accepted");
+      fetchMyResponses();
+    } catch (e: any) { toast.error(e.message); }
+  };
+
 
   useEffect(() => {
     if (!user) return;
@@ -261,11 +295,10 @@ const MechanicDashboard = () => {
       <Navbar role="mechanic" onLogout={handleLogout} />
       <div className="container max-w-2xl py-4 px-4">
         <Tabs defaultValue="issues" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-secondary">
+          <TabsList className="grid w-full grid-cols-3 bg-secondary">
+            <TabsTrigger value="issues" className="text-xs">🛠️ Requests</TabsTrigger>
             <TabsTrigger value="emergency" className="text-xs text-destructive">🚨 SOS</TabsTrigger>
-            <TabsTrigger value="issues" className="text-xs">Issues</TabsTrigger>
-            <TabsTrigger value="responses" className="text-xs">Responses</TabsTrigger>
-            <TabsTrigger value="profile" className="text-xs">Profile</TabsTrigger>
+            <TabsTrigger value="profile" className="text-xs">👤 Profile</TabsTrigger>
           </TabsList>
 
           {/* EMERGENCY ALERTS */}
@@ -294,10 +327,10 @@ const MechanicDashboard = () => {
                     <MapPin className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-foreground">{alert.user_area || "Unknown Area"}</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <a href={`tel:${alert.user_phone || ""}`} className="flex items-center gap-2 hover:text-primary">
                     <Phone className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-success font-medium">+91 {alert.user_phone || "N/A"}</span>
-                  </div>
+                  </a>
                   <div className="flex items-center gap-2">
                     <Car className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-foreground">{alert.vehicle_info || "Not specified"}</span>
@@ -344,7 +377,7 @@ const MechanicDashboard = () => {
             {!loadingIssues && nearbyIssues.length === 0 && (
               <div className="text-center text-muted-foreground text-sm py-10">No issues found. Try changing your search filters.</div>
             )}
-            {nearbyIssues.map((issue: any) => (
+            {nearbyIssues.filter((i: any) => !hiddenIssueIds.has(i.id)).map((issue: any) => (
               <div key={issue.id} className="bg-card rounded-xl border border-border p-5 animate-slide-up">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
@@ -403,46 +436,66 @@ const MechanicDashboard = () => {
                       </div>
                     </div>
                   ) : (
-                    <Button size="sm" variant="outline" onClick={() => setRespondingTo(issue.id)}>
-                      <MessageCircle className="h-3 w-3 mr-1" /> Respond
-                    </Button>
+                    <>
+                      <Button size="sm" onClick={() => setRespondingTo(issue.id)}>
+                        <Check className="h-3 w-3 mr-1" /> Accept
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleRejectIssue(issue.id)}>
+                        Reject
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
             ))}
           </TabsContent>
 
-          {/* MY RESPONSES */}
-          <TabsContent value="responses" className="space-y-3 mt-4">
-            <h2 className="text-lg font-semibold text-foreground">My Responses</h2>
-            {loadingMyResponses && <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}
+          {/* MY ACTIVE JOBS — same tab as Requests */}
+          <TabsContent value="issues" className="space-y-3 mt-2">
+            <h2 className="text-base font-semibold text-foreground mt-4 flex items-center gap-2">
+              <Check className="h-4 w-4 text-success" /> My Active Jobs
+            </h2>
+            {loadingMyResponses && <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>}
             {!loadingMyResponses && myResponses.length === 0 && (
-              <div className="text-center text-muted-foreground text-sm py-10">You haven't responded to any issues yet.</div>
+              <div className="text-center text-muted-foreground text-xs py-4">You haven't responded to any issues yet.</div>
             )}
             {myResponses.map((r: any) => (
               <div key={r.id} className="bg-card rounded-xl border border-border p-4 animate-slide-up">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm text-foreground font-medium">{r.issue?.description?.slice(0, 60)}...</p>
-                  <span className={`text-xs px-2 py-0.5 rounded ${r.status === "accepted" ? "bg-success/20 text-success" : "bg-primary/20 text-primary"}`}>{r.status}</span>
+                  <p className="text-sm text-foreground font-medium truncate flex-1">{r.issue?.description?.slice(0, 60)}...</p>
+                  <span className={`text-[10px] px-2 py-0.5 rounded ${r.status === "accepted" ? "bg-success/20 text-success" : "bg-primary/20 text-primary"}`}>{r.status}</span>
                 </div>
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1"><IndianRupee className="h-3 w-3" />{r.price_quote}</span>
+                  {r.price_quote > 0 && <span className="flex items-center gap-1"><IndianRupee className="h-3 w-3" />{r.price_quote}</span>}
                   {r.availability && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{r.availability}</span>}
                 </div>
                 {r.user_rating && (
                   <div className="flex items-center gap-1 mt-2">
-                    <span className="text-xs text-muted-foreground">User Rating:</span>
                     {[1, 2, 3, 4, 5].map((s) => (
                       <Star key={s} className={`h-3 w-3 ${s <= r.user_rating ? "text-warning fill-warning" : "text-muted-foreground"}`} />
                     ))}
                   </div>
                 )}
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" onClick={() => navigate(`/chat/${r.issue_id}`)}>
                     <MessageCircle className="h-3 w-3 mr-1" /> Chat
                   </Button>
-                  {hasPhoneConsent(r.issue_id) && getUserPhone(r.issue?.user_id) && (
-                    <span className="flex items-center gap-1 text-xs text-success"><Phone className="h-3 w-3" /> +91 {getUserPhone(r.issue?.user_id)}</span>
+                  {r.status === "accepted" && hasPhoneConsent(r.issue_id) && getUserPhone(r.issue?.user_id) && (
+                    <a href={`tel:${getUserPhone(r.issue?.user_id)}`}>
+                      <Button size="sm" variant="secondary">
+                        <Phone className="h-3 w-3 mr-1" /> +91 {getUserPhone(r.issue?.user_id)}
+                      </Button>
+                    </a>
+                  )}
+                  {r.status === "accepted" && r.issue?.area && (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.issue.area + ", Chennai")}`}
+                      target="_blank" rel="noopener noreferrer"
+                    >
+                      <Button size="sm" variant="secondary">
+                        <Navigation className="h-3 w-3 mr-1" /> Navigate
+                      </Button>
+                    </a>
                   )}
                 </div>
               </div>
@@ -451,6 +504,14 @@ const MechanicDashboard = () => {
 
           {/* PROFILE */}
           <TabsContent value="profile" className="space-y-4 mt-4">
+            <section className="bg-card rounded-xl border border-border p-5 animate-slide-up flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Availability</h3>
+                <p className="text-xs text-muted-foreground">{isAvailable ? "You're showing as available to nearby users." : "You're offline — won't appear in Nearby."}</p>
+              </div>
+              <Switch checked={isAvailable} onCheckedChange={toggleAvailability} disabled={savingAvailability} />
+            </section>
+
             <section className="bg-card rounded-xl border border-border p-5 animate-slide-up">
               <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2"><Edit2 className="h-5 w-5 text-primary" /> Garage Profile</h2>
 

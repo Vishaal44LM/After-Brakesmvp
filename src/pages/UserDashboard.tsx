@@ -590,179 +590,83 @@ const UserDashboard = () => {
     <div className="min-h-screen bg-background pb-36">
       <Navbar role="user" onLogout={handleLogout} />
       <div className="container max-w-2xl py-4 px-4">
-        <Tabs defaultValue="report" className="w-full">
-          <TabsList className="grid w-full grid-cols-6 bg-secondary">
-            <TabsTrigger value="report" className="text-[10px] sm:text-xs">Report</TabsTrigger>
-            <TabsTrigger value="responses" className="text-[10px] sm:text-xs">Quotes</TabsTrigger>
-            <TabsTrigger value="find-mechanic" className="text-[10px] sm:text-xs">Find</TabsTrigger>
-            <TabsTrigger value="nearby" className="text-[10px] sm:text-xs">Nearby</TabsTrigger>
-            <TabsTrigger value="garage" className="text-[10px] sm:text-xs">Glove Box</TabsTrigger>
-            <TabsTrigger value="profile" className="text-[10px] sm:text-xs">Profile</TabsTrigger>
+        <Tabs defaultValue="nearby" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 bg-secondary">
+            <TabsTrigger value="nearby" className="text-xs">🗺️ Nearby</TabsTrigger>
+            <TabsTrigger value="garage" className="text-xs">📦 Glove Box</TabsTrigger>
+            <TabsTrigger value="profile" className="text-xs">👤 Profile</TabsTrigger>
           </TabsList>
 
-          {/* REPORT ISSUE TAB */}
-          <TabsContent value="report" className="space-y-4 mt-4">
-            <section className="bg-card rounded-xl border border-border p-5 animate-slide-up">
-              <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                <Upload className="h-5 w-5 text-primary" /> Report an Issue
-              </h2>
-
-              {vehicles.length > 0 && (
-                <div className="mb-3">
-                  <label className="text-xs text-muted-foreground mb-1 block">Select Vehicle</label>
-                  <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
-                    <SelectTrigger className="bg-secondary border-0"><SelectValue placeholder="Choose vehicle" /></SelectTrigger>
-                    <SelectContent>
-                      {vehicles.map((v: any) => (
-                        <SelectItem key={v.id} value={v.id}>
-                          {v.vehicle_type} {v.vehicle_brand} {v.vehicle_model} {v.vehicle_year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <Textarea
-                value={issueText}
-                onChange={(e) => setIssueText(e.target.value)}
-                placeholder="Describe your vehicle issue in detail..."
-                className="bg-secondary border-0 mb-3 min-h-[80px]"
-              />
-
-              <div className="flex gap-3 items-center mb-4 flex-wrap">
-                <label className="cursor-pointer">
-                  <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-muted-foreground text-sm hover:text-primary transition-colors">
-                    <Camera className="h-4 w-4" /> {imagePreview ? "Change Photo" : "Take Photo"}
-                  </div>
-                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload} />
-                </label>
-                <label className="cursor-pointer">
-                  <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-muted-foreground text-sm hover:text-primary transition-colors">
-                    <Upload className="h-4 w-4" /> Add Photos
-                  </div>
-                  <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                </label>
-                <label className="cursor-pointer">
-                  <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-muted-foreground text-sm hover:text-primary transition-colors">
-                    <Plus className="h-4 w-4" /> Add File
-                  </div>
-                  <input type="file" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.webp" className="hidden" onChange={handleImageUpload} />
-                </label>
-                {imagePreview && (
-                  <img src={imagePreview} alt="Issue" className="h-12 w-12 rounded-lg object-cover border border-border" />
-                )}
-              </div>
-
-              <Button className="w-full" onClick={handleSubmitIssue} disabled={submitting || analyzing}>
-                {(submitting || analyzing) ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-                {analyzing ? "Analyzing with AI..." : submitting ? "Submitting..." : "Submit Issue"}
-              </Button>
-            </section>
-
-            {analyzing && (
-              <section className="bg-card rounded-xl border border-border p-5 animate-slide-up">
-                <div className="flex items-center gap-2 text-primary">
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  <span className="text-sm font-medium">AI is analyzing your issue...</span>
-                </div>
-              </section>
-            )}
-
-            {analysis && (
-              <section className="bg-card rounded-xl border border-primary/30 p-5 animate-slide-up glow-primary">
-                <h2 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary" /> AI Analysis
-                </h2>
-                <div className="space-y-2">
-                  <div className="bg-secondary rounded-lg p-3"><p className="text-xs text-muted-foreground">Issue</p><p className="text-sm font-medium text-foreground">{analysis.issue}</p></div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-secondary rounded-lg p-3"><p className="text-xs text-muted-foreground">Part</p><p className="text-sm font-medium text-foreground">{analysis.affected_part}</p></div>
-                    <div className="bg-secondary rounded-lg p-3"><p className="text-xs text-muted-foreground">Severity</p>
-                      <p className={`text-sm font-medium ${analysis.severity === "High" ? "text-destructive" : analysis.severity === "Medium" ? "text-warning" : "text-success"}`}>{analysis.severity}</p>
-                    </div>
-                  </div>
-                  <div className="bg-secondary rounded-lg p-3"><p className="text-xs text-muted-foreground">Recommendation</p><p className="text-sm text-foreground">{analysis.recommendation}</p></div>
-                </div>
-              </section>
-            )}
-          </TabsContent>
-
-          {/* RESPONSES TAB */}
-          <TabsContent value="responses" className="space-y-3 mt-4">
-            <h2 className="text-lg font-semibold text-foreground">Mechanic Responses</h2>
-            {loadingResponses && <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}
-            {!loadingResponses && responses.length === 0 && (
-              <div className="text-center text-muted-foreground text-sm py-10">No responses yet. Submit an issue to get quotes from mechanics.</div>
-            )}
-            {responses.map((r: any) => (
-              <div key={r.id} className="bg-card rounded-xl border border-border p-4 animate-slide-up">
-                <div className="flex items-center gap-3 mb-3">
-                  {r.mechanic?.garage_photo_url ? (
-                    <img src={r.mechanic.garage_photo_url} className="h-12 w-12 rounded-full object-cover" />
-                  ) : (
-                    <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center text-primary font-bold">{r.mechanic?.garage_name?.[0] || "M"}</div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-foreground text-sm">{r.mechanic?.garage_name || "Mechanic"}</h3>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                      <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{r.mechanic?.area}</span>
-                      <span className="flex items-center gap-1"><Star className="h-3 w-3 text-warning" />{r.mechanic?.rating || "New"}</span>
-                    </div>
-                    {r.mechanic?.phone_number && (
-                      <p className="text-xs text-success mt-0.5 flex items-center gap-1"><Phone className="h-3 w-3" /> +91 {r.mechanic.phone_number}</p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-foreground font-semibold text-sm flex items-center gap-0.5"><IndianRupee className="h-3 w-3" />{r.price_quote}</p>
-                    {r.availability && <p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" />{r.availability}</p>}
-                  </div>
-                </div>
-                {r.message && <p className="text-sm text-muted-foreground mb-3 bg-secondary rounded-lg p-2">{r.message}</p>}
-                <p className="text-xs text-muted-foreground mb-2">Issue: {r.issue?.description?.slice(0, 60)}...</p>
-                <div className="flex gap-2">
-                  {r.status === "pending" && (
-                    <Button size="sm" onClick={() => handleAcceptResponse(r.id, r.mechanic_id, r.issue_id)}>
-                      <Check className="h-3 w-3 mr-1" /> Accept
-                    </Button>
-                  )}
-                  {r.status === "accepted" && (
-                    <span className="text-xs text-success flex items-center gap-1"><Check className="h-3 w-3" /> Accepted</span>
-                  )}
-                  <Button size="sm" variant="outline" onClick={() => navigate(`/chat/${r.issue_id}`)}>
-                    <MessageCircle className="h-3 w-3 mr-1" /> Chat
-                  </Button>
-                </div>
-                {r.status === "accepted" && (
-                  <div className="mt-3 pt-3 border-t border-border space-y-3">
-                    <LiveMechanicTracker
-                      mechanicId={r.mechanic_id}
-                      mechanicName={r.mechanic?.garage_name}
-                      mechanicPhone={r.mechanic?.phone_number}
-                    />
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-muted-foreground mr-1">Rate Mechanic:</span>
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button key={star} onClick={() => handleRateResponse(r.id, star)} className="transition-transform hover:scale-125">
-                          <Star className={`h-5 w-5 ${(r.user_rating || 0) >= star ? "text-warning fill-warning" : "text-muted-foreground"}`} />
-                        </button>
-                      ))}
-                      {r.user_rating && <span className="text-xs text-muted-foreground ml-2">({r.user_rating}/5)</span>}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </TabsContent>
-
-          {/* FIND MECHANIC TAB */}
-          <TabsContent value="find-mechanic" className="space-y-4 mt-4">
-            <FindMechanicSection user={user} vehicles={vehicles} />
-          </TabsContent>
-
-          {/* NEARBY ETA TAB */}
+          {/* NEARBY = HOME (map + request + active jobs) */}
           <TabsContent value="nearby" className="space-y-4 mt-4">
             <NearbyMechanicETA />
+
+            {/* My active requests / quotes */}
+            <section className="space-y-3">
+              <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+                <MessageCircle className="h-4 w-4 text-primary" /> My Requests
+              </h2>
+              {loadingResponses && <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>}
+              {!loadingResponses && responses.length === 0 && (
+                <div className="text-center text-muted-foreground text-xs py-4">No active requests yet. Tap "Request this Mechanic" above to start.</div>
+              )}
+              {responses.map((r: any) => (
+                <div key={r.id} className="bg-card rounded-xl border border-border p-4 animate-slide-up">
+                  <div className="flex items-center gap-3 mb-3">
+                    {r.mechanic?.garage_photo_url ? (
+                      <img src={r.mechanic.garage_photo_url} className="h-10 w-10 rounded-full object-cover" />
+                    ) : (
+                      <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center text-primary font-bold">{r.mechanic?.garage_name?.[0] || "M"}</div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-foreground text-sm truncate">{r.mechanic?.garage_name || "Mechanic"}</h3>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                        <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{r.mechanic?.area}</span>
+                        {r.price_quote > 0 && <span className="flex items-center gap-0.5"><IndianRupee className="h-3 w-3" />{r.price_quote}</span>}
+                      </div>
+                    </div>
+                    <span className={`text-[10px] px-2 py-0.5 rounded ${r.status === "accepted" ? "bg-success/20 text-success" : r.status === "rejected" ? "bg-destructive/20 text-destructive" : "bg-primary/20 text-primary"}`}>{r.status}</span>
+                  </div>
+                  {r.message && <p className="text-xs text-muted-foreground mb-2 bg-secondary rounded-lg p-2">{r.message}</p>}
+
+                  <div className="flex flex-wrap gap-2">
+                    {r.status === "pending" && r.price_quote > 0 && (
+                      <Button size="sm" onClick={() => handleAcceptResponse(r.id, r.mechanic_id, r.issue_id)}>
+                        <Check className="h-3 w-3 mr-1" /> Accept Quote
+                      </Button>
+                    )}
+                    <Button size="sm" variant="outline" onClick={() => navigate(`/chat/${r.issue_id}`)}>
+                      <MessageCircle className="h-3 w-3 mr-1" /> Chat
+                    </Button>
+                    {r.status === "accepted" && r.mechanic?.phone_number && (
+                      <a href={`tel:${r.mechanic.phone_number}`}>
+                        <Button size="sm" variant="secondary">
+                          <Phone className="h-3 w-3 mr-1" /> +91 {r.mechanic.phone_number}
+                        </Button>
+                      </a>
+                    )}
+                  </div>
+
+                  {r.status === "accepted" && (
+                    <div className="mt-3 pt-3 border-t border-border space-y-3">
+                      <LiveMechanicTracker
+                        mechanicId={r.mechanic_id}
+                        mechanicName={r.mechanic?.garage_name}
+                        mechanicPhone={r.mechanic?.phone_number}
+                      />
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground mr-1">Rate:</span>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button key={star} onClick={() => handleRateResponse(r.id, star)} className="transition-transform hover:scale-125">
+                            <Star className={`h-4 w-4 ${(r.user_rating || 0) >= star ? "text-warning fill-warning" : "text-muted-foreground"}`} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </section>
           </TabsContent>
 
           {/* DIGITAL GARAGE TAB */}

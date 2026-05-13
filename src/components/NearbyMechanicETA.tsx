@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, MapPin, Navigation, Clock, Phone, RefreshCw, AlertTriangle } from "lucide-react";
+import { Loader2, MapPin, Navigation, Clock, Phone, RefreshCw, AlertTriangle, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 // --- Fix default Leaflet marker icons (Vite/CRA can't resolve assets automatically)
 const userIcon = L.divIcon({
@@ -33,6 +35,7 @@ type Mechanic = {
   rating: number | null;
   latitude: number | null;
   longitude: number | null;
+  is_available?: boolean | null;
 };
 
 type EtaResult = {
@@ -67,6 +70,42 @@ function FitBounds({ points }: { points: [number, number][] }) {
 const CHENNAI_FALLBACK: [number, number] = [13.0827, 80.2707];
 
 export default function NearbyMechanicETA() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [requesting, setRequesting] = useState<string | null>(null);
+
+  const handleRequestMechanic = async (m: Mechanic) => {
+    if (!user) { toast.error("Please log in"); return; }
+    setRequesting(m.user_id);
+    try {
+      const { data: issue, error } = await supabase.from("issues").insert({
+        user_id: user.id,
+        description: `New service request — ETA-based booking near ${m.area}`,
+        area: m.area,
+        status: "open",
+      }).select().single();
+      if (error) throw error;
+      await supabase.from("mechanic_responses").insert({
+        issue_id: issue.id,
+        mechanic_id: m.user_id,
+        price_quote: 0,
+        message: "Customer requested you via Nearby map",
+        status: "pending",
+      });
+      await supabase.from("messages").insert({
+        issue_id: issue.id,
+        sender_id: user.id,
+        content: `Hi ${m.name || m.garage_name}, I need help with my vehicle.`,
+      });
+      toast.success(`Request sent to ${m.garage_name}!`);
+      navigate(`/chat/${issue.id}`);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to send request");
+    } finally {
+      setRequesting(null);
+    }
+  };
+
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
   const [locError, setLocError] = useState<string | null>(null);
   const [mechanics, setMechanics] = useState<Mechanic[]>([]);
@@ -105,7 +144,8 @@ export default function NearbyMechanicETA() {
       setLoadingMechs(true);
       const { data, error } = await supabase
         .from("mechanic_profiles")
-        .select("user_id,name,garage_name,area,garage_address,phone_number,rating,latitude,longitude");
+        .select("user_id,name,garage_name,area,garage_address,phone_number,rating,latitude,longitude,is_available")
+        .or("is_available.is.null,is_available.eq.true");
       if (error) {
         console.error(error);
         toast.error("Failed to load mechanics");
@@ -317,6 +357,19 @@ export default function NearbyMechanicETA() {
               {etaError && (
                 <p className="text-xs text-destructive">{etaError}</p>
               )}
+
+              <Button
+                className="w-full"
+                onClick={() => handleRequestMechanic(selected)}
+                disabled={requesting === selected.user_id}
+              >
+                {requesting === selected.user_id ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Send className="h-4 w-4 mr-2" />
+                )}
+                Request this Mechanic
+              </Button>
 
               <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                 <span>Auto-updates every 30s</span>
