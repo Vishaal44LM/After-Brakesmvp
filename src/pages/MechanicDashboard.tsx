@@ -450,37 +450,52 @@ const MechanicDashboard = () => {
             ))}
           </TabsContent>
 
-          {/* MY RESPONSES */}
-          <TabsContent value="responses" className="space-y-3 mt-4">
-            <h2 className="text-lg font-semibold text-foreground">My Responses</h2>
-            {loadingMyResponses && <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}
+          {/* MY ACTIVE JOBS — same tab as Requests */}
+          <TabsContent value="issues" className="space-y-3 mt-2">
+            <h2 className="text-base font-semibold text-foreground mt-4 flex items-center gap-2">
+              <Check className="h-4 w-4 text-success" /> My Active Jobs
+            </h2>
+            {loadingMyResponses && <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>}
             {!loadingMyResponses && myResponses.length === 0 && (
-              <div className="text-center text-muted-foreground text-sm py-10">You haven't responded to any issues yet.</div>
+              <div className="text-center text-muted-foreground text-xs py-4">You haven't responded to any issues yet.</div>
             )}
             {myResponses.map((r: any) => (
               <div key={r.id} className="bg-card rounded-xl border border-border p-4 animate-slide-up">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm text-foreground font-medium">{r.issue?.description?.slice(0, 60)}...</p>
-                  <span className={`text-xs px-2 py-0.5 rounded ${r.status === "accepted" ? "bg-success/20 text-success" : "bg-primary/20 text-primary"}`}>{r.status}</span>
+                  <p className="text-sm text-foreground font-medium truncate flex-1">{r.issue?.description?.slice(0, 60)}...</p>
+                  <span className={`text-[10px] px-2 py-0.5 rounded ${r.status === "accepted" ? "bg-success/20 text-success" : "bg-primary/20 text-primary"}`}>{r.status}</span>
                 </div>
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1"><IndianRupee className="h-3 w-3" />{r.price_quote}</span>
+                  {r.price_quote > 0 && <span className="flex items-center gap-1"><IndianRupee className="h-3 w-3" />{r.price_quote}</span>}
                   {r.availability && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{r.availability}</span>}
                 </div>
                 {r.user_rating && (
                   <div className="flex items-center gap-1 mt-2">
-                    <span className="text-xs text-muted-foreground">User Rating:</span>
                     {[1, 2, 3, 4, 5].map((s) => (
                       <Star key={s} className={`h-3 w-3 ${s <= r.user_rating ? "text-warning fill-warning" : "text-muted-foreground"}`} />
                     ))}
                   </div>
                 )}
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" onClick={() => navigate(`/chat/${r.issue_id}`)}>
                     <MessageCircle className="h-3 w-3 mr-1" /> Chat
                   </Button>
-                  {hasPhoneConsent(r.issue_id) && getUserPhone(r.issue?.user_id) && (
-                    <span className="flex items-center gap-1 text-xs text-success"><Phone className="h-3 w-3" /> +91 {getUserPhone(r.issue?.user_id)}</span>
+                  {r.status === "accepted" && hasPhoneConsent(r.issue_id) && getUserPhone(r.issue?.user_id) && (
+                    <a href={`tel:${getUserPhone(r.issue?.user_id)}`}>
+                      <Button size="sm" variant="secondary">
+                        <Phone className="h-3 w-3 mr-1" /> +91 {getUserPhone(r.issue?.user_id)}
+                      </Button>
+                    </a>
+                  )}
+                  {r.status === "accepted" && r.issue?.area && (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.issue.area + ", Chennai")}`}
+                      target="_blank" rel="noopener noreferrer"
+                    >
+                      <Button size="sm" variant="secondary">
+                        <Navigation className="h-3 w-3 mr-1" /> Navigate
+                      </Button>
+                    </a>
                   )}
                 </div>
               </div>
