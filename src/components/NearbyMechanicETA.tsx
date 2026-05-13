@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, MapPin, Navigation, Clock, Phone, RefreshCw, AlertTriangle } from "lucide-react";
+import { Loader2, MapPin, Navigation, Clock, Phone, RefreshCw, AlertTriangle, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 // --- Fix default Leaflet marker icons (Vite/CRA can't resolve assets automatically)
 const userIcon = L.divIcon({
