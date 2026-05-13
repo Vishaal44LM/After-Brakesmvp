@@ -72,14 +72,44 @@ const MechanicDashboard = () => {
 
   const loadExtendedProfile = async () => {
     if (!user) return;
-    const { data } = await supabase.from("mechanic_profiles").select("garage_address, google_maps_link, years_of_experience, phone_number").eq("user_id", user.id).single();
+    const { data } = await supabase.from("mechanic_profiles").select("garage_address, google_maps_link, years_of_experience, phone_number, is_available").eq("user_id", user.id).single();
     if (data) {
       setEditAddress((data as any).garage_address || "");
       setEditMapsLink((data as any).google_maps_link || "");
       setEditExperience((data as any).years_of_experience?.toString() || "");
       setEditPhoneNumber((data as any).phone_number || "");
+      setIsAvailable((data as any).is_available !== false);
     }
   };
+
+  const toggleAvailability = async (next: boolean) => {
+    if (!user) return;
+    setSavingAvailability(true);
+    setIsAvailable(next);
+    try {
+      await supabase.from("mechanic_profiles").update({ is_available: next } as any).eq("user_id", user.id);
+      toast.success(next ? "You're now available" : "You're offline");
+    } catch (e: any) {
+      toast.error(e.message);
+      setIsAvailable(!next);
+    } finally {
+      setSavingAvailability(false);
+    }
+  };
+
+  const handleRejectIssue = (issueId: string) => {
+    setHiddenIssueIds((s) => new Set(s).add(issueId));
+    toast.success("Request dismissed");
+  };
+
+  const handleAcceptResponseAsAccepted = async (responseId: string) => {
+    try {
+      await supabase.from("mechanic_responses").update({ status: "accepted" } as any).eq("id", responseId);
+      toast.success("Job marked as accepted");
+      fetchMyResponses();
+    } catch (e: any) { toast.error(e.message); }
+  };
+
 
   useEffect(() => {
     if (!user) return;
