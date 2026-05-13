@@ -53,6 +53,9 @@ const MechanicDashboard = () => {
   const [garagePhoto, setGaragePhoto] = useState<File | null>(null);
   const [garagePhotoPreview, setGaragePhotoPreview] = useState<string | null>(mechanicProfile?.garage_photo_url || null);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [isAvailable, setIsAvailable] = useState(true);
+  const [savingAvailability, setSavingAvailability] = useState(false);
+  const [hiddenIssueIds, setHiddenIssueIds] = useState<Set<string>>(new Set());
 
   const [emergencyAlerts, setEmergencyAlerts] = useState<any[]>([]);
   const [loadingEmergencies, setLoadingEmergencies] = useState(false);
