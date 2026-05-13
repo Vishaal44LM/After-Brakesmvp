@@ -489,6 +489,14 @@ const MechanicDashboard = () => {
 
           {/* PROFILE */}
           <TabsContent value="profile" className="space-y-4 mt-4">
+            <section className="bg-card rounded-xl border border-border p-5 animate-slide-up flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Availability</h3>
+                <p className="text-xs text-muted-foreground">{isAvailable ? "You're showing as available to nearby users." : "You're offline — won't appear in Nearby."}</p>
+              </div>
+              <Switch checked={isAvailable} onCheckedChange={toggleAvailability} disabled={savingAvailability} />
+            </section>
+
             <section className="bg-card rounded-xl border border-border p-5 animate-slide-up">
               <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2"><Edit2 className="h-5 w-5 text-primary" /> Garage Profile</h2>
 
