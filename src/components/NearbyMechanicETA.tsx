@@ -35,6 +35,7 @@ type Mechanic = {
   rating: number | null;
   latitude: number | null;
   longitude: number | null;
+  is_available?: boolean | null;
 };
 
 type EtaResult = {
@@ -69,6 +70,42 @@ function FitBounds({ points }: { points: [number, number][] }) {
 const CHENNAI_FALLBACK: [number, number] = [13.0827, 80.2707];
 
 export default function NearbyMechanicETA() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [requesting, setRequesting] = useState<string | null>(null);
+
+  const handleRequestMechanic = async (m: Mechanic) => {
+    if (!user) { toast.error("Please log in"); return; }
+    setRequesting(m.user_id);
+    try {
+      const { data: issue, error } = await supabase.from("issues").insert({
+        user_id: user.id,
+        description: `New service request — ETA-based booking near ${m.area}`,
+        area: m.area,
+        status: "open",
+      }).select().single();
+      if (error) throw error;
+      await supabase.from("mechanic_responses").insert({
+        issue_id: issue.id,
+        mechanic_id: m.user_id,
+        price_quote: 0,
+        message: "Customer requested you via Nearby map",
+        status: "pending",
+      });
+      await supabase.from("messages").insert({
+        issue_id: issue.id,
+        sender_id: user.id,
+        content: `Hi ${m.name || m.garage_name}, I need help with my vehicle.`,
+      });
+      toast.success(`Request sent to ${m.garage_name}!`);
+      navigate(`/chat/${issue.id}`);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to send request");
+    } finally {
+      setRequesting(null);
+    }
+  };
+
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
   const [locError, setLocError] = useState<string | null>(null);
   const [mechanics, setMechanics] = useState<Mechanic[]>([]);
