@@ -357,6 +357,19 @@ export default function NearbyMechanicETA() {
                 <p className="text-xs text-destructive">{etaError}</p>
               )}
 
+              <Button
+                className="w-full"
+                onClick={() => handleRequestMechanic(selected)}
+                disabled={requesting === selected.user_id}
+              >
+                {requesting === selected.user_id ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Send className="h-4 w-4 mr-2" />
+                )}
+                Request this Mechanic
+              </Button>
+
               <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                 <span>Auto-updates every 30s</span>
                 <Button
