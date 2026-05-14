@@ -177,6 +177,15 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
       }));
       await supabase.from("mechanic_responses").insert(rows as any);
 
+      // Auto-grant phone consent so the accepting mechanic can see the user's number
+      const consents = targets.map((m) => ({
+        user_id: user.id,
+        mechanic_id: m.user_id,
+        issue_id: issue.id,
+        granted: true,
+      }));
+      await supabase.from("phone_share_consents").insert(consents as any);
+
       toast.success(`Invite sent to ${targets.length} mechanic${targets.length > 1 ? "s" : ""}`);
       setActiveIssueId(issue.id);
       setDescription("");
