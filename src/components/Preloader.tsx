@@ -35,7 +35,7 @@ const Preloader = ({ onComplete }: { onComplete: () => void }) => {
         After Brakes
       </h1>
       <p className="text-muted-foreground text-sm md:text-base animate-fade-in" style={{ animationDelay: "0.3s" }}>
-        Right Mechanic. Right Time.
+        Mechanics in Minutes.
       </p>
       <div className="mt-8 w-48 h-1 rounded-full bg-secondary overflow-hidden">
         <div

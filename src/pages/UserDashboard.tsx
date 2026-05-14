@@ -12,8 +12,9 @@ import {
   FolderOpen, FileText, Shield, Leaf, CalendarDays
 } from "lucide-react";
 import AIMechanicCharacter from "@/components/AIMechanicCharacter";
-import NearbyMechanicETA from "@/components/NearbyMechanicETA";
+import RequestMechanicHome from "@/components/RequestMechanicHome";
 import LiveMechanicTracker from "@/components/LiveMechanicTracker";
+import { issueTypeLabel } from "@/data/issueTypes";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -597,9 +598,9 @@ const UserDashboard = () => {
             <TabsTrigger value="profile" className="text-xs">👤 Profile</TabsTrigger>
           </TabsList>
 
-          {/* NEARBY = HOME (map + request + active jobs) */}
+          {/* NEARBY = HOME (map + request flow + active jobs) */}
           <TabsContent value="nearby" className="space-y-4 mt-4">
-            <NearbyMechanicETA />
+            <RequestMechanicHome vehicles={vehicles} onActiveIssue={() => fetchIssues()} />
 
             {/* My active requests / quotes */}
             <section className="space-y-3">
@@ -607,10 +608,18 @@ const UserDashboard = () => {
                 <MessageCircle className="h-4 w-4 text-primary" /> My Requests
               </h2>
               {loadingResponses && <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>}
-              {!loadingResponses && responses.length === 0 && (
-                <div className="text-center text-muted-foreground text-xs py-4">No active requests yet. Tap "Request this Mechanic" above to start.</div>
-              )}
-              {responses.map((r: any) => (
+              {(() => {
+                // Show only one row per issue, preferring the accepted response
+                const byIssue = new Map<string, any>();
+                responses.forEach((r: any) => {
+                  const cur = byIssue.get(r.issue_id);
+                  if (!cur || (r.status === "accepted" && cur.status !== "accepted")) byIssue.set(r.issue_id, r);
+                });
+                const visible = Array.from(byIssue.values()).filter((r) => r.status === "accepted");
+                if (!loadingResponses && visible.length === 0) {
+                  return <div className="text-center text-muted-foreground text-xs py-4">No active jobs yet. Tap "Request a Mechanic" above to get help.</div>;
+                }
+                return visible.map((r: any) => (
                 <div key={r.id} className="bg-card rounded-xl border border-border p-4 animate-slide-up">
                   <div className="flex items-center gap-3 mb-3">
                     {r.mechanic?.garage_photo_url ? (
@@ -619,6 +628,7 @@ const UserDashboard = () => {
                       <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center text-primary font-bold">{r.mechanic?.garage_name?.[0] || "M"}</div>
                     )}
                     <div className="flex-1 min-w-0">
+                      <p className="text-[10px] uppercase tracking-wide text-primary font-semibold">{issueTypeLabel(r.issue?.issue_type)}</p>
                       <h3 className="font-semibold text-foreground text-sm truncate">{r.mechanic?.garage_name || "Mechanic"}</h3>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                         <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{r.mechanic?.area}</span>
@@ -665,7 +675,8 @@ const UserDashboard = () => {
                     </div>
                   )}
                 </div>
-              ))}
+                ));
+              })()}
             </section>
           </TabsContent>
 

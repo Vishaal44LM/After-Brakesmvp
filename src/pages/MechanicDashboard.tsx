@@ -7,9 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Car, MapPin, AlertTriangle, IndianRupee, MessageCircle, Send, Loader2,
-  Clock, Star, Edit2, Save, Camera, Store, User, Phone, Search, Link, FileCheck,
-  Siren, Check, Navigation
+  MapPin, IndianRupee, MessageCircle, Loader2,
+  Clock, Star, Edit2, Save, Camera, Store, User, Phone, Link, FileCheck,
+  Navigation
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -17,7 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { chennaiAreas } from "@/data/chennaiAreas";
 import { useBroadcastMechanicLocation } from "@/hooks/useBroadcastMechanicLocation";
-import EmergencyAlertMap from "@/components/EmergencyAlertMap";
+import MechanicRequestsHome from "@/components/MechanicRequestsHome";
 
 const MechanicDashboard = () => {
   const navigate = useNavigate();
@@ -26,23 +26,6 @@ const MechanicDashboard = () => {
   // Broadcast live GPS while there is at least one accepted job
   const [hasAcceptedJob, setHasAcceptedJob] = useState(false);
   useBroadcastMechanicLocation(user?.id, hasAcceptedJob);
-
-  const [nearbyIssues, setNearbyIssues] = useState<any[]>([]);
-  const [loadingIssues, setLoadingIssues] = useState(false);
-  const [respondingTo, setRespondingTo] = useState<string | null>(null);
-  const [quote, setQuote] = useState("");
-  const [message, setMessage] = useState("");
-  const [availability, setAvailability] = useState("");
-  const [submittingResponse, setSubmittingResponse] = useState(false);
-
-  const [searchArea, setSearchArea] = useState("");
-
-  const [myResponses, setMyResponses] = useState<any[]>([]);
-  const [loadingMyResponses, setLoadingMyResponses] = useState(false);
-  const [respondedIssueIds, setRespondedIssueIds] = useState<Set<string>>(new Set());
-
-  const [phoneConsents, setPhoneConsents] = useState<any[]>([]);
-  const [userPhones, setUserPhones] = useState<Record<string, string>>({});
 
   const [editName, setEditName] = useState(mechanicProfile?.name || "");
   const [editGarageName, setEditGarageName] = useState(mechanicProfile?.garage_name || "");
@@ -56,10 +39,6 @@ const MechanicDashboard = () => {
   const [savingProfile, setSavingProfile] = useState(false);
   const [isAvailable, setIsAvailable] = useState(true);
   const [savingAvailability, setSavingAvailability] = useState(false);
-  const [hiddenIssueIds, setHiddenIssueIds] = useState<Set<string>>(new Set());
-
-  const [emergencyAlerts, setEmergencyAlerts] = useState<any[]>([]);
-  const [loadingEmergencies, setLoadingEmergencies] = useState(false);
 
   useEffect(() => {
     if (mechanicProfile) {
@@ -98,144 +77,29 @@ const MechanicDashboard = () => {
     }
   };
 
-  const handleRejectIssue = (issueId: string) => {
-    setHiddenIssueIds((s) => new Set(s).add(issueId));
-    toast.success("Request dismissed");
-  };
-
-  const handleAcceptResponseAsAccepted = async (responseId: string) => {
-    try {
-      await supabase.from("mechanic_responses").update({ status: "accepted" } as any).eq("id", responseId);
-      toast.success("Job marked as accepted");
-      fetchMyResponses();
-    } catch (e: any) { toast.error(e.message); }
-  };
-
-
+  // Track whether we have any accepted job to enable GPS broadcast
   useEffect(() => {
     if (!user) return;
-    fetchNearbyIssues();
-    fetchMyResponses();
-    fetchPhoneConsents();
-    fetchEmergencyAlerts();
-
+    const refreshAccepted = async () => {
+      const { data } = await supabase
+        .from("mechanic_responses")
+        .select("id")
+        .eq("mechanic_id", user.id)
+        .eq("status", "accepted")
+        .limit(1);
+      setHasAcceptedJob(!!(data && data.length));
+    };
+    refreshAccepted();
     const ch = supabase
-      .channel("emergency-alerts-feed")
+      .channel(`mech-accept-${user.id}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "emergency_alerts" },
-        () => fetchEmergencyAlerts(),
+        { event: "*", schema: "public", table: "mechanic_responses", filter: `mechanic_id=eq.${user.id}` },
+        () => refreshAccepted(),
       )
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [user, mechanicProfile]);
-
-  const fetchEmergencyAlerts = async () => {
-    setLoadingEmergencies(true);
-    try {
-      const { data } = await supabase.from("emergency_alerts").select("*").eq("status", "active").order("created_at", { ascending: false });
-      setEmergencyAlerts((data as any[]) || []);
-    } catch {
-      setEmergencyAlerts([]);
-    } finally {
-      setLoadingEmergencies(false);
-    }
-  };
-
-  const fetchNearbyIssues = async (overrideArea?: string) => {
-    if (!user) return;
-    setLoadingIssues(true);
-    try {
-      let query = supabase
-        .from("issues")
-        .select("*")
-        .eq("status", "open")
-        .order("created_at", { ascending: false });
-
-      const filterArea = overrideArea || searchArea || mechanicProfile?.area;
-      if (filterArea) query = query.eq("area", filterArea);
-
-      const { data, error } = await query;
-      if (error) { setNearbyIssues([]); setLoadingIssues(false); return; }
-
-      if (data && data.length > 0) {
-        const vehicleIds = data.filter((i: any) => i.vehicle_id).map((i: any) => i.vehicle_id);
-        let vehicleMap: Record<string, any> = {};
-        if (vehicleIds.length > 0) {
-          const { data: vehiclesData } = await supabase.from("vehicles").select("*").in("id", vehicleIds);
-          vehiclesData?.forEach((v: any) => { vehicleMap[v.id] = v; });
-        }
-        setNearbyIssues(data.map((i: any) => ({ ...i, vehicle: vehicleMap[i.vehicle_id] || null })));
-      } else {
-        setNearbyIssues([]);
-      }
-    } catch {
-      setNearbyIssues([]);
-    } finally {
-      setLoadingIssues(false);
-    }
-  };
-
-  const handleSearch = () => fetchNearbyIssues(searchArea);
-  const handleResetSearch = () => { setSearchArea(""); fetchNearbyIssues(""); };
-
-  const fetchMyResponses = async () => {
-    if (!user) return;
-    setLoadingMyResponses(true);
-    const { data } = await supabase.from("mechanic_responses").select("*").eq("mechanic_id", user.id).order("created_at", { ascending: false });
-    if (data && data.length > 0) {
-      const issueIds = data.map((r: any) => r.issue_id);
-      setRespondedIssueIds(new Set(issueIds));
-      const { data: issuesData } = await supabase.from("issues").select("*").in("id", issueIds);
-      setMyResponses(data.map((r: any) => ({ ...r, issue: issuesData?.find((i: any) => i.id === r.issue_id) })));
-      setHasAcceptedJob(data.some((r: any) => r.status === "accepted"));
-    } else {
-      setMyResponses([]);
-      setRespondedIssueIds(new Set());
-      setHasAcceptedJob(false);
-    }
-    setLoadingMyResponses(false);
-  };
-
-  const fetchPhoneConsents = async () => {
-    if (!user) return;
-    const { data } = await supabase.from("phone_share_consents").select("*").eq("mechanic_id", user.id).eq("granted", true);
-    setPhoneConsents(data || []);
-    if (data && data.length > 0) {
-      const userIds = [...new Set(data.map((c: any) => c.user_id))];
-      const { data: profiles } = await supabase.from("profiles").select("user_id, phone").in("user_id", userIds);
-      const phoneMap: Record<string, string> = {};
-      profiles?.forEach((p: any) => { phoneMap[p.user_id] = p.phone; });
-      setUserPhones(phoneMap);
-    }
-  };
-
-  const handleSubmitResponse = async (issueId: string) => {
-    if (!quote) { toast.error("Enter your price quote"); return; }
-    if (!user) return;
-    setSubmittingResponse(true);
-    try {
-      const { error } = await supabase.from("mechanic_responses").insert({
-        issue_id: issueId,
-        mechanic_id: user.id,
-        price_quote: parseInt(quote),
-        message: message || null,
-        availability: availability || null,
-      });
-      if (error) throw error;
-      toast.success("Response submitted!");
-      setRespondingTo(null);
-      setQuote("");
-      setMessage("");
-      setAvailability("");
-      fetchMyResponses();
-      fetchNearbyIssues();
-    } catch (e: any) {
-      toast.error(e.message);
-    } finally {
-      setSubmittingResponse(false);
-    }
-  };
+  }, [user]);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -286,220 +150,20 @@ const MechanicDashboard = () => {
   };
 
   const handleLogout = async () => { await signOut(); navigate("/"); };
-  const getUserPhone = (issueUserId: string) => userPhones[issueUserId] || null;
-  const hasPhoneConsent = (issueId: string) => phoneConsents.some((c: any) => c.issue_id === issueId);
-  const hasResponded = (issueId: string) => respondedIssueIds.has(issueId);
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar role="mechanic" onLogout={handleLogout} />
       <div className="container max-w-2xl py-4 px-4">
         <Tabs defaultValue="issues" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-secondary">
+          <TabsList className="grid w-full grid-cols-2 bg-secondary">
             <TabsTrigger value="issues" className="text-xs">🛠️ Requests</TabsTrigger>
-            <TabsTrigger value="emergency" className="text-xs text-destructive">🚨 SOS</TabsTrigger>
             <TabsTrigger value="profile" className="text-xs">👤 Profile</TabsTrigger>
           </TabsList>
 
-          {/* EMERGENCY ALERTS */}
-          <TabsContent value="emergency" className="space-y-3 mt-4">
-            <h2 className="text-lg font-semibold text-destructive flex items-center gap-2">
-              <Siren className="h-5 w-5" /> Emergency Alerts
-            </h2>
-            {loadingEmergencies && <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-destructive" /></div>}
-            {!loadingEmergencies && emergencyAlerts.length === 0 && (
-              <div className="text-center text-muted-foreground text-sm py-10">No active emergency alerts.</div>
-            )}
-            {emergencyAlerts.map((alert: any) => (
-              <div key={alert.id} className="bg-destructive/5 border-2 border-destructive/30 rounded-xl p-5 animate-slide-up relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-destructive animate-pulse" />
-                <div className="flex items-center gap-2 mb-3">
-                  <AlertTriangle className="h-5 w-5 text-destructive" />
-                  <span className="text-sm font-bold text-destructive uppercase tracking-wide">Emergency</span>
-                  <span className="text-xs text-muted-foreground ml-auto">{new Date(alert.created_at).toLocaleString()}</span>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-foreground font-medium">{alert.user_name || "Unknown"}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-foreground">{alert.user_area || "Unknown Area"}</span>
-                  </div>
-                  <a href={`tel:${alert.user_phone || ""}`} className="flex items-center gap-2 hover:text-primary">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-success font-medium">+91 {alert.user_phone || "N/A"}</span>
-                  </a>
-                  <div className="flex items-center gap-2">
-                    <Car className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-foreground">{alert.vehicle_info || "Not specified"}</span>
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <EmergencyAlertMap
-                    alertId={alert.id}
-                    initialLat={alert.latitude}
-                    initialLng={alert.longitude}
-                    userName={alert.user_name}
-                  />
-                </div>
-              </div>
-            ))}
-            <Button variant="outline" onClick={fetchEmergencyAlerts} className="w-full">
-              <Loader2 className="h-4 w-4 mr-1" /> Refresh Alerts
-            </Button>
-          </TabsContent>
-
-          {/* NEARBY ISSUES */}
-          <TabsContent value="issues" className="space-y-3 mt-4">
-            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-primary" /> Nearby Issues
-              {mechanicProfile && <span className="text-xs text-muted-foreground font-normal">({mechanicProfile.area})</span>}
-            </h2>
-
-            <div className="bg-card rounded-xl border border-border p-4 space-y-3">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Search className="h-4 w-4 text-primary" />
-                <span className="font-medium">Search Customers</span>
-              </div>
-              <Select value={searchArea} onValueChange={setSearchArea}>
-                <SelectTrigger className="bg-secondary border-0 text-sm"><SelectValue placeholder="Filter by Area" /></SelectTrigger>
-                <SelectContent>{chennaiAreas.map((a) => (<SelectItem key={a} value={a}>{a}</SelectItem>))}</SelectContent>
-              </Select>
-              <div className="flex gap-2">
-                <Button size="sm" onClick={handleSearch}><Search className="h-3 w-3 mr-1" /> Search</Button>
-                <Button size="sm" variant="outline" onClick={handleResetSearch}>Reset</Button>
-              </div>
-            </div>
-
-            {loadingIssues && <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}
-            {!loadingIssues && nearbyIssues.length === 0 && (
-              <div className="text-center text-muted-foreground text-sm py-10">No issues found. Try changing your search filters.</div>
-            )}
-            {nearbyIssues.filter((i: any) => !hiddenIssueIds.has(i.id)).map((issue: any) => (
-              <div key={issue.id} className="bg-card rounded-xl border border-border p-5 animate-slide-up">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Car className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground text-sm">
-                        {issue.vehicle ? `${issue.vehicle.vehicle_type} ${issue.vehicle.vehicle_brand || ""} ${issue.vehicle.vehicle_model || ""}` : "Vehicle"}
-                      </h3>
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <MapPin className="h-3 w-3" /> {issue.area || "Unknown"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <p className="text-sm text-foreground mb-2">{issue.description}</p>
-                {issue.image_url && (
-                  <img src={issue.image_url} alt="Issue" className="w-full h-40 object-cover rounded-lg mb-2" />
-                )}
-
-                {hasPhoneConsent(issue.id) && getUserPhone(issue.user_id) && (
-                  <div className="flex items-center gap-2 mb-3 bg-success/10 rounded-lg p-2">
-                    <Phone className="h-4 w-4 text-success" />
-                    <span className="text-sm text-success font-medium">+91 {getUserPhone(issue.user_id)}</span>
-                  </div>
-                )}
-
-                <div className="flex gap-2 mt-2">
-                  {hasResponded(issue.id) ? (
-                    <>
-                      <span className="text-xs text-muted-foreground flex items-center gap-1 bg-secondary rounded-lg px-3 py-1.5">✓ Responded</span>
-                      <Button size="sm" variant="outline" onClick={() => navigate(`/chat/${issue.id}`)}>
-                        <MessageCircle className="h-3 w-3 mr-1" /> Chat
-                      </Button>
-                    </>
-                  ) : respondingTo === issue.id ? (
-                    <div className="w-full space-y-3 bg-secondary rounded-lg p-4 animate-fade-in">
-                      <div>
-                        <label className="text-xs text-muted-foreground mb-1 block">Price Quote (₹)</label>
-                        <Input value={quote} onChange={(e) => setQuote(e.target.value.replace(/\D/g, ""))} placeholder="1500" className="bg-card border-0" />
-                      </div>
-                      <div>
-                        <label className="text-xs text-muted-foreground mb-1 block">Availability (date & time)</label>
-                        <Input value={availability} onChange={(e) => setAvailability(e.target.value)} placeholder="e.g. Tomorrow 10 AM" className="bg-card border-0" />
-                      </div>
-                      <div>
-                        <label className="text-xs text-muted-foreground mb-1 block">Message (optional)</label>
-                        <Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Add details..." className="bg-card border-0 min-h-[60px]" />
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={() => handleSubmitResponse(issue.id)} disabled={submittingResponse}>
-                          {submittingResponse ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Send className="h-3 w-3 mr-1" />} Submit
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => setRespondingTo(null)}>Cancel</Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <Button size="sm" onClick={() => setRespondingTo(issue.id)}>
-                        <Check className="h-3 w-3 mr-1" /> Accept
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleRejectIssue(issue.id)}>
-                        Reject
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
-          </TabsContent>
-
-          {/* MY ACTIVE JOBS — same tab as Requests */}
-          <TabsContent value="issues" className="space-y-3 mt-2">
-            <h2 className="text-base font-semibold text-foreground mt-4 flex items-center gap-2">
-              <Check className="h-4 w-4 text-success" /> My Active Jobs
-            </h2>
-            {loadingMyResponses && <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>}
-            {!loadingMyResponses && myResponses.length === 0 && (
-              <div className="text-center text-muted-foreground text-xs py-4">You haven't responded to any issues yet.</div>
-            )}
-            {myResponses.map((r: any) => (
-              <div key={r.id} className="bg-card rounded-xl border border-border p-4 animate-slide-up">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm text-foreground font-medium truncate flex-1">{r.issue?.description?.slice(0, 60)}...</p>
-                  <span className={`text-[10px] px-2 py-0.5 rounded ${r.status === "accepted" ? "bg-success/20 text-success" : "bg-primary/20 text-primary"}`}>{r.status}</span>
-                </div>
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  {r.price_quote > 0 && <span className="flex items-center gap-1"><IndianRupee className="h-3 w-3" />{r.price_quote}</span>}
-                  {r.availability && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{r.availability}</span>}
-                </div>
-                {r.user_rating && (
-                  <div className="flex items-center gap-1 mt-2">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <Star key={s} className={`h-3 w-3 ${s <= r.user_rating ? "text-warning fill-warning" : "text-muted-foreground"}`} />
-                    ))}
-                  </div>
-                )}
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" onClick={() => navigate(`/chat/${r.issue_id}`)}>
-                    <MessageCircle className="h-3 w-3 mr-1" /> Chat
-                  </Button>
-                  {r.status === "accepted" && hasPhoneConsent(r.issue_id) && getUserPhone(r.issue?.user_id) && (
-                    <a href={`tel:${getUserPhone(r.issue?.user_id)}`}>
-                      <Button size="sm" variant="secondary">
-                        <Phone className="h-3 w-3 mr-1" /> +91 {getUserPhone(r.issue?.user_id)}
-                      </Button>
-                    </a>
-                  )}
-                  {r.status === "accepted" && r.issue?.area && (
-                    <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.issue.area + ", Chennai")}`}
-                      target="_blank" rel="noopener noreferrer"
-                    >
-                      <Button size="sm" variant="secondary">
-                        <Navigation className="h-3 w-3 mr-1" /> Navigate
-                      </Button>
-                    </a>
-                  )}
-                </div>
-              </div>
-            ))}
+          {/* REQUESTS HOME — map + incoming list */}
+          <TabsContent value="issues" className="space-y-4 mt-4">
+            <MechanicRequestsHome />
           </TabsContent>
 
           {/* PROFILE */}
