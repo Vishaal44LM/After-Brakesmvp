@@ -608,10 +608,18 @@ const UserDashboard = () => {
                 <MessageCircle className="h-4 w-4 text-primary" /> My Requests
               </h2>
               {loadingResponses && <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>}
-              {!loadingResponses && responses.length === 0 && (
-                <div className="text-center text-muted-foreground text-xs py-4">No active requests yet. Tap "Request this Mechanic" above to start.</div>
-              )}
-              {responses.map((r: any) => (
+              {(() => {
+                // Show only one row per issue, preferring the accepted response
+                const byIssue = new Map<string, any>();
+                responses.forEach((r: any) => {
+                  const cur = byIssue.get(r.issue_id);
+                  if (!cur || (r.status === "accepted" && cur.status !== "accepted")) byIssue.set(r.issue_id, r);
+                });
+                const visible = Array.from(byIssue.values()).filter((r) => r.status === "accepted");
+                if (!loadingResponses && visible.length === 0) {
+                  return <div className="text-center text-muted-foreground text-xs py-4">No active jobs yet. Tap "Request a Mechanic" above to get help.</div>;
+                }
+                return visible.map((r: any) => (
                 <div key={r.id} className="bg-card rounded-xl border border-border p-4 animate-slide-up">
                   <div className="flex items-center gap-3 mb-3">
                     {r.mechanic?.garage_photo_url ? (
