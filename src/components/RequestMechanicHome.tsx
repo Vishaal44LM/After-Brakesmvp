@@ -57,7 +57,6 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
 
   // Active outgoing request waiting for acceptance
   const [activeIssueId, setActiveIssueId] = useState<string | null>(null);
-  const [acceptedCount, setAcceptedCount] = useState(0);
   const pollRef = useRef<number | null>(null);
 
   // 1. Geolocation
@@ -77,7 +76,7 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
     );
   }, []);
 
-  // 2. Load available mechanics (only for map markers, no nearest selection)
+  // 2. Load available mechanics for map markers
   useEffect(() => {
     (async () => {
       setLoadingMechs(true);
@@ -92,35 +91,48 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
 
   // 3. Watch for an accepted response on the active issue
   useEffect(() => {
-    if (!activeIssueId) return;
+    if (!activeIssueId || !user) return;
+    let cancelled = false;
     const check = async () => {
       const { data } = await supabase
         .from("mechanic_responses")
-        .select("status")
+        .select("id, mechanic_id, status")
         .eq("issue_id", activeIssueId)
-        .eq("status", "accepted");
+        .eq("status", "accepted")
+        .limit(1);
+      if (cancelled) return;
       if (data && data.length > 0) {
-        setAcceptedCount(data.length);
+        const accepted = data[0];
+        // Auto-grant phone consent so the accepting mechanic can see our number
+        await supabase
+          .from("phone_share_consents")
+          .insert({
+            user_id: user.id,
+            mechanic_id: accepted.mechanic_id,
+            issue_id: activeIssueId,
+            granted: true,
+          } as any);
         toast.success("A mechanic accepted your request!");
         onActiveIssue(activeIssueId);
         setActiveIssueId(null);
       }
     };
     check();
-    pollRef.current = window.setInterval(check, 5000);
+    pollRef.current = window.setInterval(check, 4000);
     const ch = supabase
       .channel(`req-${activeIssueId}`)
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "mechanic_responses", filter: `issue_id=eq.${activeIssueId}` },
+        { event: "*", schema: "public", table: "mechanic_responses", filter: `issue_id=eq.${activeIssueId}` },
         () => check(),
       )
       .subscribe();
     return () => {
+      cancelled = true;
       if (pollRef.current) window.clearInterval(pollRef.current);
       supabase.removeChannel(ch);
     };
-  }, [activeIssueId, onActiveIssue]);
+  }, [activeIssueId, user, onActiveIssue]);
 
   const allPoints: [number, number][] = useMemo(() => {
     const p: [number, number][] = [];
@@ -140,7 +152,6 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
 
     setRequesting(true);
     try {
-      const area = profile?.area || null;
       const { data: issue, error } = await supabase
         .from("issues")
         .insert({
@@ -148,7 +159,7 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
           description: description || ISSUE_TYPES.find(t => t.value === issueType)?.label || "Service request",
           issue_type: issueType,
           vehicle_id: vehicleId || null,
-          area,
+          area: profile?.area || null,
           latitude: userPos[0],
           longitude: userPos[1],
           status: "open",
@@ -157,36 +168,7 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
         .single();
       if (error) throw error;
 
-      // Fan out invites to all available mechanics (prefer same area)
-      let targets = mechanics.filter((m) => m.is_available !== false);
-      if (area) {
-        const sameArea = targets.filter((m) => m.area === area);
-        if (sameArea.length > 0) targets = sameArea;
-      }
-      if (targets.length === 0) {
-        toast.error("No mechanics are available right now");
-        setRequesting(false);
-        return;
-      }
-      const rows = targets.map((m) => ({
-        issue_id: issue.id,
-        mechanic_id: m.user_id,
-        price_quote: 0,
-        message: `New request: ${ISSUE_TYPES.find(t => t.value === issueType)?.label}`,
-        status: "pending",
-      }));
-      await supabase.from("mechanic_responses").insert(rows as any);
-
-      // Auto-grant phone consent so the accepting mechanic can see the user's number
-      const consents = targets.map((m) => ({
-        user_id: user.id,
-        mechanic_id: m.user_id,
-        issue_id: issue.id,
-        granted: true,
-      }));
-      await supabase.from("phone_share_consents").insert(consents as any);
-
-      toast.success(`Invite sent to ${targets.length} mechanic${targets.length > 1 ? "s" : ""}`);
+      toast.success("Request sent — looking for a mechanic…");
       setActiveIssueId(issue.id);
       setDescription("");
       setIssueType("");
@@ -254,7 +236,12 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
             </p>
           )}
 
-          <div className="space-y-2">
+          <Button className="w-full" size="lg" onClick={handleRequest} disabled={requesting || !!activeIssueId}>
+            {requesting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+            Request a Mechanic
+          </Button>
+
+          <div className="space-y-2 pt-1">
             <label className="text-xs font-medium text-muted-foreground">What's the problem?</label>
             <Select value={issueType} onValueChange={setIssueType}>
               <SelectTrigger className="bg-secondary border-0">
@@ -289,11 +276,6 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
               className="bg-secondary border-0 min-h-[60px]"
             />
           </div>
-
-          <Button className="w-full" size="lg" onClick={handleRequest} disabled={requesting || !!activeIssueId}>
-            {requesting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-            Request a Mechanic
-          </Button>
         </div>
       </Card>
 
@@ -311,7 +293,7 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
             <div>
               <h3 className="text-lg font-semibold">Looking for mechanics…</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                We've notified nearby mechanics. Hold tight — first to accept will be on the way.
+                We've notified nearby mechanics. The first one to accept will be on the way.
               </p>
             </div>
             <Button variant="outline" className="w-full" onClick={cancelRequest}>
