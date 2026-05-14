@@ -674,7 +674,8 @@ const UserDashboard = () => {
                     </div>
                   )}
                 </div>
-              ))}
+                ));
+              })()}
             </section>
           </TabsContent>
 
