@@ -150,9 +150,6 @@ const MechanicDashboard = () => {
   };
 
   const handleLogout = async () => { await signOut(); navigate("/"); };
-  const getUserPhone = (issueUserId: string) => userPhones[issueUserId] || null;
-  const hasPhoneConsent = (issueId: string) => phoneConsents.some((c: any) => c.issue_id === issueId);
-  const hasResponded = (issueId: string) => respondedIssueIds.has(issueId);
 
   return (
     <div className="min-h-screen bg-background">
