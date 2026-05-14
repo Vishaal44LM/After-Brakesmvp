@@ -628,6 +628,7 @@ const UserDashboard = () => {
                       <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center text-primary font-bold">{r.mechanic?.garage_name?.[0] || "M"}</div>
                     )}
                     <div className="flex-1 min-w-0">
+                      <p className="text-[10px] uppercase tracking-wide text-primary font-semibold">{issueTypeLabel(r.issue?.issue_type)}</p>
                       <h3 className="font-semibold text-foreground text-sm truncate">{r.mechanic?.garage_name || "Mechanic"}</h3>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                         <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{r.mechanic?.area}</span>
