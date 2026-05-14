@@ -27,23 +27,6 @@ const MechanicDashboard = () => {
   const [hasAcceptedJob, setHasAcceptedJob] = useState(false);
   useBroadcastMechanicLocation(user?.id, hasAcceptedJob);
 
-  const [nearbyIssues, setNearbyIssues] = useState<any[]>([]);
-  const [loadingIssues, setLoadingIssues] = useState(false);
-  const [respondingTo, setRespondingTo] = useState<string | null>(null);
-  const [quote, setQuote] = useState("");
-  const [message, setMessage] = useState("");
-  const [availability, setAvailability] = useState("");
-  const [submittingResponse, setSubmittingResponse] = useState(false);
-
-  const [searchArea, setSearchArea] = useState("");
-
-  const [myResponses, setMyResponses] = useState<any[]>([]);
-  const [loadingMyResponses, setLoadingMyResponses] = useState(false);
-  const [respondedIssueIds, setRespondedIssueIds] = useState<Set<string>>(new Set());
-
-  const [phoneConsents, setPhoneConsents] = useState<any[]>([]);
-  const [userPhones, setUserPhones] = useState<Record<string, string>>({});
-
   const [editName, setEditName] = useState(mechanicProfile?.name || "");
   const [editGarageName, setEditGarageName] = useState(mechanicProfile?.garage_name || "");
   const [editArea, setEditArea] = useState(mechanicProfile?.area || "");
@@ -56,10 +39,6 @@ const MechanicDashboard = () => {
   const [savingProfile, setSavingProfile] = useState(false);
   const [isAvailable, setIsAvailable] = useState(true);
   const [savingAvailability, setSavingAvailability] = useState(false);
-  const [hiddenIssueIds, setHiddenIssueIds] = useState<Set<string>>(new Set());
-
-  const [emergencyAlerts, setEmergencyAlerts] = useState<any[]>([]);
-  const [loadingEmergencies, setLoadingEmergencies] = useState(false);
 
   useEffect(() => {
     if (mechanicProfile) {
@@ -98,144 +77,29 @@ const MechanicDashboard = () => {
     }
   };
 
-  const handleRejectIssue = (issueId: string) => {
-    setHiddenIssueIds((s) => new Set(s).add(issueId));
-    toast.success("Request dismissed");
-  };
-
-  const handleAcceptResponseAsAccepted = async (responseId: string) => {
-    try {
-      await supabase.from("mechanic_responses").update({ status: "accepted" } as any).eq("id", responseId);
-      toast.success("Job marked as accepted");
-      fetchMyResponses();
-    } catch (e: any) { toast.error(e.message); }
-  };
-
-
+  // Track whether we have any accepted job to enable GPS broadcast
   useEffect(() => {
     if (!user) return;
-    fetchNearbyIssues();
-    fetchMyResponses();
-    fetchPhoneConsents();
-    fetchEmergencyAlerts();
-
+    const refreshAccepted = async () => {
+      const { data } = await supabase
+        .from("mechanic_responses")
+        .select("id")
+        .eq("mechanic_id", user.id)
+        .eq("status", "accepted")
+        .limit(1);
+      setHasAcceptedJob(!!(data && data.length));
+    };
+    refreshAccepted();
     const ch = supabase
-      .channel("emergency-alerts-feed")
+      .channel(`mech-accept-${user.id}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "emergency_alerts" },
-        () => fetchEmergencyAlerts(),
+        { event: "*", schema: "public", table: "mechanic_responses", filter: `mechanic_id=eq.${user.id}` },
+        () => refreshAccepted(),
       )
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [user, mechanicProfile]);
-
-  const fetchEmergencyAlerts = async () => {
-    setLoadingEmergencies(true);
-    try {
-      const { data } = await supabase.from("emergency_alerts").select("*").eq("status", "active").order("created_at", { ascending: false });
-      setEmergencyAlerts((data as any[]) || []);
-    } catch {
-      setEmergencyAlerts([]);
-    } finally {
-      setLoadingEmergencies(false);
-    }
-  };
-
-  const fetchNearbyIssues = async (overrideArea?: string) => {
-    if (!user) return;
-    setLoadingIssues(true);
-    try {
-      let query = supabase
-        .from("issues")
-        .select("*")
-        .eq("status", "open")
-        .order("created_at", { ascending: false });
-
-      const filterArea = overrideArea || searchArea || mechanicProfile?.area;
-      if (filterArea) query = query.eq("area", filterArea);
-
-      const { data, error } = await query;
-      if (error) { setNearbyIssues([]); setLoadingIssues(false); return; }
-
-      if (data && data.length > 0) {
-        const vehicleIds = data.filter((i: any) => i.vehicle_id).map((i: any) => i.vehicle_id);
-        let vehicleMap: Record<string, any> = {};
-        if (vehicleIds.length > 0) {
-          const { data: vehiclesData } = await supabase.from("vehicles").select("*").in("id", vehicleIds);
-          vehiclesData?.forEach((v: any) => { vehicleMap[v.id] = v; });
-        }
-        setNearbyIssues(data.map((i: any) => ({ ...i, vehicle: vehicleMap[i.vehicle_id] || null })));
-      } else {
-        setNearbyIssues([]);
-      }
-    } catch {
-      setNearbyIssues([]);
-    } finally {
-      setLoadingIssues(false);
-    }
-  };
-
-  const handleSearch = () => fetchNearbyIssues(searchArea);
-  const handleResetSearch = () => { setSearchArea(""); fetchNearbyIssues(""); };
-
-  const fetchMyResponses = async () => {
-    if (!user) return;
-    setLoadingMyResponses(true);
-    const { data } = await supabase.from("mechanic_responses").select("*").eq("mechanic_id", user.id).order("created_at", { ascending: false });
-    if (data && data.length > 0) {
-      const issueIds = data.map((r: any) => r.issue_id);
-      setRespondedIssueIds(new Set(issueIds));
-      const { data: issuesData } = await supabase.from("issues").select("*").in("id", issueIds);
-      setMyResponses(data.map((r: any) => ({ ...r, issue: issuesData?.find((i: any) => i.id === r.issue_id) })));
-      setHasAcceptedJob(data.some((r: any) => r.status === "accepted"));
-    } else {
-      setMyResponses([]);
-      setRespondedIssueIds(new Set());
-      setHasAcceptedJob(false);
-    }
-    setLoadingMyResponses(false);
-  };
-
-  const fetchPhoneConsents = async () => {
-    if (!user) return;
-    const { data } = await supabase.from("phone_share_consents").select("*").eq("mechanic_id", user.id).eq("granted", true);
-    setPhoneConsents(data || []);
-    if (data && data.length > 0) {
-      const userIds = [...new Set(data.map((c: any) => c.user_id))];
-      const { data: profiles } = await supabase.from("profiles").select("user_id, phone").in("user_id", userIds);
-      const phoneMap: Record<string, string> = {};
-      profiles?.forEach((p: any) => { phoneMap[p.user_id] = p.phone; });
-      setUserPhones(phoneMap);
-    }
-  };
-
-  const handleSubmitResponse = async (issueId: string) => {
-    if (!quote) { toast.error("Enter your price quote"); return; }
-    if (!user) return;
-    setSubmittingResponse(true);
-    try {
-      const { error } = await supabase.from("mechanic_responses").insert({
-        issue_id: issueId,
-        mechanic_id: user.id,
-        price_quote: parseInt(quote),
-        message: message || null,
-        availability: availability || null,
-      });
-      if (error) throw error;
-      toast.success("Response submitted!");
-      setRespondingTo(null);
-      setQuote("");
-      setMessage("");
-      setAvailability("");
-      fetchMyResponses();
-      fetchNearbyIssues();
-    } catch (e: any) {
-      toast.error(e.message);
-    } finally {
-      setSubmittingResponse(false);
-    }
-  };
+  }, [user]);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
