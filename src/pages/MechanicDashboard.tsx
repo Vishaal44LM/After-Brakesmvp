@@ -7,9 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Car, MapPin, AlertTriangle, IndianRupee, MessageCircle, Send, Loader2,
-  Clock, Star, Edit2, Save, Camera, Store, User, Phone, Search, Link, FileCheck,
-  Siren, Check, Navigation
+  MapPin, IndianRupee, MessageCircle, Loader2,
+  Clock, Star, Edit2, Save, Camera, Store, User, Phone, Link, FileCheck,
+  Navigation
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -17,7 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { chennaiAreas } from "@/data/chennaiAreas";
 import { useBroadcastMechanicLocation } from "@/hooks/useBroadcastMechanicLocation";
-import EmergencyAlertMap from "@/components/EmergencyAlertMap";
+import MechanicRequestsHome from "@/components/MechanicRequestsHome";
 
 const MechanicDashboard = () => {
   const navigate = useNavigate();
