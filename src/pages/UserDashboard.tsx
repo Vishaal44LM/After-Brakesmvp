@@ -12,8 +12,9 @@ import {
   FolderOpen, FileText, Shield, Leaf, CalendarDays
 } from "lucide-react";
 import AIMechanicCharacter from "@/components/AIMechanicCharacter";
-import NearbyMechanicETA from "@/components/NearbyMechanicETA";
+import RequestMechanicHome from "@/components/RequestMechanicHome";
 import LiveMechanicTracker from "@/components/LiveMechanicTracker";
+import { issueTypeLabel } from "@/data/issueTypes";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -597,9 +598,9 @@ const UserDashboard = () => {
             <TabsTrigger value="profile" className="text-xs">👤 Profile</TabsTrigger>
           </TabsList>
 
-          {/* NEARBY = HOME (map + request + active jobs) */}
+          {/* NEARBY = HOME (map + request flow + active jobs) */}
           <TabsContent value="nearby" className="space-y-4 mt-4">
-            <NearbyMechanicETA />
+            <RequestMechanicHome vehicles={vehicles} onActiveIssue={() => fetchIssues()} />
 
             {/* My active requests / quotes */}
             <section className="space-y-3">
