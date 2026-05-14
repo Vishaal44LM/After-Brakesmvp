@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "@/assets/logo.png";
-import { LogOut, Home, AlertTriangle } from "lucide-react";
+import { LogOut, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface NavbarProps {
@@ -26,17 +26,6 @@ const Navbar = ({ role, onLogout }: NavbarProps) => {
         </div>
 
         <div className="flex items-center gap-2">
-          {role === "user" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/emergency")}
-              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-            >
-              <AlertTriangle className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">SOS</span>
-            </Button>
-          )}
           {role && (
             <Button
               variant="ghost"

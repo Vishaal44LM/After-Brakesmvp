@@ -94,7 +94,7 @@ const Login = () => {
         <img src={logo} alt="After Brakes" className="h-16 w-16 mb-4 animate-fade-in" />
         <h1 className="font-brand text-3xl font-bold text-foreground mb-1">After Brakes</h1>
         <div className="h-1 w-16 bg-primary rounded-full mb-2 animate-pulse-glow" />
-        <p className="text-muted-foreground text-sm mb-8">Right Mechanic. Right Time.</p>
+        <p className="text-muted-foreground text-sm mb-8">Mechanics in Minutes.</p>
 
         <div className="w-full bg-card rounded-xl p-6 border border-border animate-slide-up">
           {/* Toggle login/signup */}
