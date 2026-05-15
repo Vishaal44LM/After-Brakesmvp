@@ -527,6 +527,18 @@ const UserDashboard = () => {
     }
   };
 
+  const handleCancelAccepted = async (responseId: string, issueId: string) => {
+    if (!confirm("Cancel this request? You can request another mechanic afterwards.")) return;
+    try {
+      await supabase.from("mechanic_responses").update({ status: "cancelled" } as any).eq("id", responseId);
+      await supabase.from("issues").update({ status: "cancelled" } as any).eq("id", issueId);
+      toast.success("Request cancelled");
+      fetchIssues();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
   const handleRateResponse = async (responseId: string, rating: number) => {
     try {
       const { error } = await supabase.from("mechanic_responses").update({ user_rating: rating } as any).eq("id", responseId);
