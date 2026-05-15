@@ -365,7 +365,7 @@ function ActiveJobCard({
       {job.description && <p className="text-sm text-foreground bg-secondary/50 rounded-lg p-2">{job.description}</p>}
 
       {job.latitude != null && job.longitude != null && (
-        <RequestMiniMap userLat={job.latitude} userLng={job.longitude} trackMechanicId={job.userId ? undefined : undefined} height={200} />
+        <RequestMiniMap userLat={job.latitude} userLng={job.longitude} height={200} />
       )}
 
       <div className="flex flex-wrap gap-2">
