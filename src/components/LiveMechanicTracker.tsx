@@ -134,11 +134,29 @@ export default function LiveMechanicTracker({ mechanicId, mechanicName, mechanic
       </div>
       <div className="p-3 bg-card flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs text-muted-foreground">Mechanic on the way</p>
-          <p className="font-semibold truncate">{mechanicName || "Mechanic"}</p>
-          {!mechPos && (
-            <p className="text-[11px] text-warning mt-0.5">Waiting for live location…</p>
-          )}
+          {(() => {
+            const arrived =
+              userPos && mechPos &&
+              (() => {
+                const toRad = (d: number) => (d * Math.PI) / 180;
+                const R = 6371000;
+                const dLat = toRad(mechPos[0] - userPos[0]);
+                const dLng = toRad(mechPos[1] - userPos[1]);
+                const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(userPos[0])) * Math.cos(toRad(mechPos[0])) * Math.sin(dLng / 2) ** 2;
+                return 2 * R * Math.asin(Math.sqrt(a)) < 100;
+              })();
+            return (
+              <>
+                <span className={`inline-block text-[10px] px-2 py-0.5 rounded mb-1 ${arrived ? "bg-success/30 text-success" : "bg-primary/20 text-primary"}`}>
+                  {arrived ? "✅ Mechanic has arrived" : "🛵 Mechanic is on the way"}
+                </span>
+                <p className="font-semibold truncate">{mechanicName || "Mechanic"}</p>
+                {!mechPos && (
+                  <p className="text-[11px] text-warning mt-0.5">Waiting for live location…</p>
+                )}
+              </>
+            );
+          })()}
         </div>
         <div className="flex items-center gap-3">
           <div className="text-center">
