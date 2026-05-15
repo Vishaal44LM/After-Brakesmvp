@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Camera, Upload, Sparkles, Star, MapPin, MessageCircle, Clock, IndianRupee,
   Loader2, Send, Bot, User, Check, Phone, Car, Edit2, Plus, Trash2, Save, Search, Wrench, Mic, MicOff, Volume2,
-  FolderOpen, FileText, Shield, Leaf, CalendarDays
+  FolderOpen, FileText, Shield, Leaf, CalendarDays, Ban
 } from "lucide-react";
 import AIMechanicCharacter from "@/components/AIMechanicCharacter";
 import RequestMechanicHome from "@/components/RequestMechanicHome";
