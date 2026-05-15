@@ -4,25 +4,24 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, MapPin, Check, X, MessageCircle, Phone, Navigation, Car, AlertTriangle } from "lucide-react";
+import { Loader2, MapPin, Check, X, MessageCircle, Phone, Navigation, Car, AlertTriangle, Ban, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { issueTypeLabel } from "@/data/issueTypes";
+import RequestMiniMap, { distanceMeters } from "@/components/RequestMiniMap";
 
 const mechIcon = L.divIcon({
   className: "",
   html: `<div style="width:20px;height:20px;border-radius:50%;background:hsl(263 56% 50%);border:3px solid white;box-shadow:0 0 0 3px hsla(263,56%,50%,0.35);"></div>`,
-  iconSize: [20, 20],
-  iconAnchor: [10, 10],
+  iconSize: [20, 20], iconAnchor: [10, 10],
 });
 const userIcon = L.divIcon({
   className: "",
   html: `<div style="width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:hsl(0 70% 50%);border:3px solid white;box-shadow:0 4px 10px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;">
     <span style="transform:rotate(45deg);color:white;font-weight:700;font-size:14px;">📍</span>
   </div>`,
-  iconSize: [30, 30],
-  iconAnchor: [15, 30],
+  iconSize: [30, 30], iconAnchor: [15, 30],
 });
 
 const CHENNAI_FALLBACK: [number, number] = [13.0827, 80.2707];
@@ -60,7 +59,6 @@ export default function MechanicRequestsHome() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<string | null>(null);
-  const [hidden, setHidden] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!navigator.geolocation) { setPos(CHENNAI_FALLBACK); return; }
@@ -75,7 +73,7 @@ export default function MechanicRequestsHome() {
     if (!user) return;
     setLoading(true);
     try {
-      // 1. Open issues (mechanics can read all open via RLS)
+      // 1. Open issues
       const { data: openIssues } = await supabase
         .from("issues")
         .select("*")
@@ -83,28 +81,32 @@ export default function MechanicRequestsHome() {
         .order("created_at", { ascending: false })
         .limit(50);
 
-      // 2. My accepted responses
-      const { data: myAccepted } = await supabase
+      // 2. ALL my responses (accepted, rejected, cancelled, pending) — used to filter & to show accepted jobs
+      const { data: myResponses } = await supabase
         .from("mechanic_responses")
         .select("*")
-        .eq("mechanic_id", user.id)
-        .eq("status", "accepted");
+        .eq("mechanic_id", user.id);
 
-      const acceptedIssueIds = new Set((myAccepted || []).map((r: any) => r.issue_id));
-      // also exclude open issues that some other mechanic already took? We don't know without joining; keep simple: show open issues even if status open.
+      const respByIssue = new Map<string, any>((myResponses || []).map((r: any) => [r.issue_id, r]));
+      const acceptedIds = (myResponses || []).filter((r: any) => r.status === "accepted").map((r: any) => r.issue_id);
 
-      // 3. Issues for accepted responses
-      const acceptedIds = Array.from(acceptedIssueIds);
+      // 3. Fetch issues for accepted responses (may not be in openIssues)
       const { data: acceptedIssues } = acceptedIds.length
         ? await supabase.from("issues").select("*").in("id", acceptedIds)
         : { data: [] as any[] };
 
+      // Filter open issues: drop any I've already responded to (accepted, rejected, cancelled)
+      const openClean = (openIssues || []).filter((i: any) => !respByIssue.has(i.id));
+
       const allIssues = [
-        ...(openIssues || []).filter((i: any) => !acceptedIssueIds.has(i.id)),
-        ...(acceptedIssues || []),
+        ...openClean,
+        ...((acceptedIssues || []).filter((i: any) => {
+          const r = respByIssue.get(i.id);
+          return r && r.status === "accepted";
+        })),
       ];
 
-      // 4. Fetch related vehicles + profiles
+      // 4. Related vehicles + profiles
       const userIds = [...new Set(allIssues.map((i: any) => i.user_id))];
       const vehicleIds = allIssues.filter((i: any) => i.vehicle_id).map((i: any) => i.vehicle_id);
       const [{ data: profiles }, { data: vehicles }] = await Promise.all([
@@ -117,8 +119,8 @@ export default function MechanicRequestsHome() {
       ]);
 
       const list: Job[] = allIssues.map((i: any) => {
-        const isAccepted = acceptedIssueIds.has(i.id);
-        const myResp = (myAccepted || []).find((r: any) => r.issue_id === i.id);
+        const myResp = respByIssue.get(i.id);
+        const isAccepted = myResp?.status === "accepted";
         const profile = (profiles || []).find((p: any) => p.user_id === i.user_id);
         const veh = (vehicles || []).find((v: any) => v.id === i.vehicle_id);
         return {
@@ -148,19 +150,11 @@ export default function MechanicRequestsHome() {
     fetchJobs();
     const ch1 = supabase
       .channel(`mech-issues-feed`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "issues" },
-        () => fetchJobs(),
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "issues" }, () => fetchJobs())
       .subscribe();
     const ch2 = supabase
       .channel(`mech-resps-feed-${user.id}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "mechanic_responses", filter: `mechanic_id=eq.${user.id}` },
-        () => fetchJobs(),
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "mechanic_responses", filter: `mechanic_id=eq.${user.id}` }, () => fetchJobs())
       .subscribe();
     return () => { supabase.removeChannel(ch1); supabase.removeChannel(ch2); };
   }, [user]);
@@ -184,22 +178,51 @@ export default function MechanicRequestsHome() {
     } finally { setActing(null); }
   };
 
-  const handleReject = (j: Job) => {
-    setHidden((s) => new Set(s).add(j.issueId));
-    toast.success("Dismissed");
+  const handleReject = async (j: Job) => {
+    if (!user) return;
+    setActing(j.issueId);
+    try {
+      // Persist rejection so it doesn't reappear after navigation
+      await supabase.from("mechanic_responses").insert({
+        issue_id: j.issueId,
+        mechanic_id: user.id,
+        price_quote: 0,
+        message: "Rejected",
+        status: "rejected",
+      } as any);
+      toast.success("Dismissed");
+      fetchJobs();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally { setActing(null); }
   };
 
-  const visible = jobs.filter((j) => !hidden.has(j.issueId));
+  const handleCancelAccepted = async (j: Job) => {
+    if (!user || !j.responseId) return;
+    if (!confirm("Cancel this job? The customer will be notified and the request will be re-opened for other mechanics.")) return;
+    setActing(j.issueId);
+    try {
+      await supabase.from("mechanic_responses").update({ status: "cancelled" } as any).eq("id", j.responseId);
+      // Re-open for others
+      await supabase.from("issues").update({ status: "open" } as any).eq("id", j.issueId);
+      toast.success("Job cancelled");
+      fetchJobs();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally { setActing(null); }
+  };
 
   const allPoints: [number, number][] = useMemo(() => {
     const p: [number, number][] = [];
     if (pos) p.push(pos);
-    visible.filter((j) => j.latitude != null && j.longitude != null)
+    jobs.filter((j) => j.latitude != null && j.longitude != null)
       .forEach((j) => p.push([j.latitude!, j.longitude!]));
     return p;
-  }, [pos, visible]);
+  }, [pos, jobs]);
 
   const center = pos || CHENNAI_FALLBACK;
+  const acceptedJobs = jobs.filter((j) => j.status === "accepted");
+  const openJobs = jobs.filter((j) => j.status === "open");
 
   return (
     <div className="space-y-4">
@@ -208,10 +231,8 @@ export default function MechanicRequestsHome() {
           {pos ? (
             <MapContainer center={center} zoom={13} scrollWheelZoom style={{ height: "100%", width: "100%" }} className="rounded-t-lg">
               <TileLayer attribution="" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              <Marker position={pos} icon={mechIcon}>
-                <Popup>You</Popup>
-              </Marker>
-              {visible
+              <Marker position={pos} icon={mechIcon}><Popup>You</Popup></Marker>
+              {jobs
                 .filter((j) => j.latitude != null && j.longitude != null)
                 .map((j) => (
                   <Marker key={j.issueId} position={[j.latitude!, j.longitude!]} icon={userIcon}>
@@ -231,23 +252,43 @@ export default function MechanicRequestsHome() {
           )}
         </div>
         <div className="p-3 bg-card text-xs text-muted-foreground">
-          {visible.length === 0 ? "No active requests on map" : `${visible.length} live request${visible.length > 1 ? "s" : ""} • Tap a marker to view`}
+          {jobs.length === 0 ? "No active requests on map" : `${jobs.length} live request${jobs.length > 1 ? "s" : ""} · Tap a marker to view`}
         </div>
       </Card>
 
+      {/* ACCEPTED JOB(S) — pinned at top */}
+      {acceptedJobs.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-base font-semibold flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-success" /> Active Job
+          </h2>
+          {acceptedJobs.map((j) => (
+            <ActiveJobCard
+              key={j.issueId}
+              job={j}
+              mechanicPos={pos}
+              onCancel={() => handleCancelAccepted(j)}
+              onChat={() => navigate(`/chat/${j.issueId}`)}
+              cancelling={acting === j.issueId}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* INCOMING REQUESTS */}
       <div className="space-y-3">
         <h2 className="text-base font-semibold flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 text-primary" /> Incoming Requests
         </h2>
         {loading && <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>}
-        {!loading && visible.length === 0 && (
+        {!loading && openJobs.length === 0 && (
           <div className="text-center text-muted-foreground text-sm py-8">
             No requests yet. You'll see them here when customers nearby ask for help.
           </div>
         )}
-        {visible.map((j) => (
-          <div key={j.issueId} className={`bg-card rounded-xl border p-4 animate-slide-up ${j.status === "accepted" ? "border-success/40" : "border-border"}`}>
-            <div className="flex items-start justify-between gap-2 mb-2">
+        {openJobs.map((j) => (
+          <div key={j.issueId} className="bg-card rounded-xl border border-border p-4 animate-slide-up space-y-3">
+            <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs uppercase tracking-wide text-primary font-semibold">{issueTypeLabel(j.issue_type)}</p>
                 <h3 className="font-semibold text-sm truncate">{j.userName || "Customer"}</h3>
@@ -255,50 +296,95 @@ export default function MechanicRequestsHome() {
                   <MapPin className="h-3 w-3" /> {j.area || "Unknown area"}
                 </p>
               </div>
-              <span className={`text-[10px] px-2 py-0.5 rounded shrink-0 ${j.status === "accepted" ? "bg-success/20 text-success" : "bg-primary/20 text-primary"}`}>{j.status}</span>
+              <span className="text-[10px] px-2 py-0.5 rounded shrink-0 bg-primary/20 text-primary">new</span>
             </div>
             {j.vehicleLabel && (
-              <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <Car className="h-3 w-3" /> {j.vehicleLabel}
               </p>
             )}
-            {j.description && <p className="text-sm text-foreground mb-2 line-clamp-3">{j.description}</p>}
+            {j.description && <p className="text-sm text-foreground">{j.description}</p>}
 
-            <div className="flex flex-wrap gap-2 mt-2">
-              {j.status === "open" ? (
-                <>
-                  <Button size="sm" onClick={() => handleAccept(j)} disabled={acting === j.issueId}>
-                    {acting === j.issueId ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Check className="h-3 w-3 mr-1" />} Accept
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => handleReject(j)}>
-                    <X className="h-3 w-3 mr-1" /> Reject
-                  </Button>
-                  {j.latitude != null && j.longitude != null && (
-                    <a href={`https://www.google.com/maps/dir/?api=1&destination=${j.latitude},${j.longitude}`} target="_blank" rel="noopener noreferrer">
-                      <Button size="sm" variant="secondary"><Navigation className="h-3 w-3 mr-1" /> Preview</Button>
-                    </a>
-                  )}
-                </>
-              ) : (
-                <>
-                  <Button size="sm" variant="outline" onClick={() => navigate(`/chat/${j.issueId}`)}>
-                    <MessageCircle className="h-3 w-3 mr-1" /> Chat
-                  </Button>
-                  {j.userPhone && (
-                    <a href={`tel:${j.userPhone}`}>
-                      <Button size="sm" variant="secondary"><Phone className="h-3 w-3 mr-1" /> +91 {j.userPhone}</Button>
-                    </a>
-                  )}
-                  {j.latitude != null && j.longitude != null && (
-                    <a href={`https://www.google.com/maps/dir/?api=1&destination=${j.latitude},${j.longitude}`} target="_blank" rel="noopener noreferrer">
-                      <Button size="sm" variant="secondary"><Navigation className="h-3 w-3 mr-1" /> Navigate</Button>
-                    </a>
-                  )}
-                </>
-              )}
+            {j.latitude != null && j.longitude != null && (
+              <RequestMiniMap userLat={j.latitude} userLng={j.longitude} height={140} />
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" onClick={() => handleAccept(j)} disabled={acting === j.issueId} className="flex-1">
+                {acting === j.issueId ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Check className="h-3 w-3 mr-1" />} Accept Job
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => handleReject(j)} disabled={acting === j.issueId}>
+                <X className="h-3 w-3 mr-1" /> Reject
+              </Button>
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/** Active accepted job: live tracking mini map, status, chat & call & cancel. */
+function ActiveJobCard({
+  job,
+  mechanicPos,
+  onCancel,
+  onChat,
+  cancelling,
+}: {
+  job: Job;
+  mechanicPos: [number, number] | null;
+  onCancel: () => void;
+  onChat: () => void;
+  cancelling: boolean;
+}) {
+  const arrived =
+    mechanicPos && job.latitude != null && job.longitude != null
+      ? distanceMeters(mechanicPos, [job.latitude, job.longitude]) < 100
+      : false;
+
+  return (
+    <div className="bg-card rounded-xl border border-success/40 p-4 animate-slide-up space-y-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-xs uppercase tracking-wide text-success font-semibold">{issueTypeLabel(job.issue_type)}</p>
+          <h3 className="font-semibold text-sm truncate">{job.userName || "Customer"}</h3>
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <MapPin className="h-3 w-3" /> {job.area || "Unknown area"}
+          </p>
+        </div>
+        <span className={`text-[10px] px-2 py-0.5 rounded shrink-0 ${arrived ? "bg-success/30 text-success" : "bg-primary/20 text-primary"}`}>
+          {arrived ? "Arrived" : "On the way"}
+        </span>
+      </div>
+      {job.vehicleLabel && (
+        <p className="text-xs text-muted-foreground flex items-center gap-1">
+          <Car className="h-3 w-3" /> {job.vehicleLabel}
+        </p>
+      )}
+      {job.description && <p className="text-sm text-foreground bg-secondary/50 rounded-lg p-2">{job.description}</p>}
+
+      {job.latitude != null && job.longitude != null && (
+        <RequestMiniMap userLat={job.latitude} userLng={job.longitude} height={200} />
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" onClick={onChat}>
+          <MessageCircle className="h-3 w-3 mr-1" /> Chat
+        </Button>
+        {job.userPhone && (
+          <a href={`tel:${job.userPhone}`}>
+            <Button size="sm" variant="secondary"><Phone className="h-3 w-3 mr-1" /> +91 {job.userPhone}</Button>
+          </a>
+        )}
+        {job.latitude != null && job.longitude != null && (
+          <a href={`https://www.google.com/maps/dir/?api=1&destination=${job.latitude},${job.longitude}`} target="_blank" rel="noopener noreferrer">
+            <Button size="sm" variant="secondary"><Navigation className="h-3 w-3 mr-1" /> Navigate</Button>
+          </a>
+        )}
+        <Button size="sm" variant="destructive" onClick={onCancel} disabled={cancelling} className="ml-auto">
+          {cancelling ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Ban className="h-3 w-3 mr-1" />} Cancel Job
+        </Button>
       </div>
     </div>
   );

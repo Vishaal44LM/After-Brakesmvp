@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Camera, Upload, Sparkles, Star, MapPin, MessageCircle, Clock, IndianRupee,
   Loader2, Send, Bot, User, Check, Phone, Car, Edit2, Plus, Trash2, Save, Search, Wrench, Mic, MicOff, Volume2,
-  FolderOpen, FileText, Shield, Leaf, CalendarDays
+  FolderOpen, FileText, Shield, Leaf, CalendarDays, Ban
 } from "lucide-react";
 import AIMechanicCharacter from "@/components/AIMechanicCharacter";
 import RequestMechanicHome from "@/components/RequestMechanicHome";
@@ -527,6 +527,18 @@ const UserDashboard = () => {
     }
   };
 
+  const handleCancelAccepted = async (responseId: string, issueId: string) => {
+    if (!confirm("Cancel this request? You can request another mechanic afterwards.")) return;
+    try {
+      await supabase.from("mechanic_responses").update({ status: "cancelled" } as any).eq("id", responseId);
+      await supabase.from("issues").update({ status: "cancelled" } as any).eq("id", issueId);
+      toast.success("Request cancelled");
+      fetchIssues();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
   const handleRateResponse = async (responseId: string, rating: number) => {
     try {
       const { error } = await supabase.from("mechanic_responses").update({ user_rating: rating } as any).eq("id", responseId);
@@ -654,6 +666,11 @@ const UserDashboard = () => {
                           <Phone className="h-3 w-3 mr-1" /> +91 {r.mechanic.phone_number}
                         </Button>
                       </a>
+                    )}
+                    {r.status === "accepted" && (
+                      <Button size="sm" variant="destructive" className="ml-auto" onClick={() => handleCancelAccepted(r.id, r.issue_id)}>
+                        <Ban className="h-3 w-3 mr-1" /> Cancel
+                      </Button>
                     )}
                   </div>
 
