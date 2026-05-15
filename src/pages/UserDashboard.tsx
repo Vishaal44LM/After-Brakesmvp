@@ -667,6 +667,11 @@ const UserDashboard = () => {
                         </Button>
                       </a>
                     )}
+                    {r.status === "accepted" && (
+                      <Button size="sm" variant="destructive" className="ml-auto" onClick={() => handleCancelAccepted(r.id, r.issue_id)}>
+                        <Ban className="h-3 w-3 mr-1" /> Cancel
+                      </Button>
+                    )}
                   </div>
 
                   {r.status === "accepted" && (
