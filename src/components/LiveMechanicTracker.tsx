@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Polyline, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { Card } from "@/components/ui/card";
 import { Loader2, Navigation, Clock, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import AnimatedMarker from "./AnimatedMarker";
 
 const userIcon = L.divIcon({
   className: "",
@@ -21,9 +22,12 @@ const mechIcon = L.divIcon({
 
 function FitBounds({ points }: { points: [number, number][] }) {
   const map = useMap();
+  const didFit = useRef(false);
   useEffect(() => {
     if (points.length < 2) return;
+    if (didFit.current) return;
     map.fitBounds(L.latLngBounds(points.map((p) => L.latLng(p[0], p[1]))), { padding: [50, 50], maxZoom: 16 });
+    didFit.current = true;
   }, [points, map]);
   return null;
 }
@@ -43,13 +47,13 @@ export default function LiveMechanicTracker({ mechanicId, mechanicName, mechanic
   const [loadingEta, setLoadingEta] = useState(false);
   const lastEtaTs = useRef(0);
 
-  // user geolocation
+  // user geolocation (high-frequency)
   useEffect(() => {
     if (!navigator.geolocation) return;
     const id = navigator.geolocation.watchPosition(
       (p) => setUserPos([p.coords.latitude, p.coords.longitude]),
       (e) => console.warn(e),
-      { enableHighAccuracy: true, maximumAge: 5000 },
+      { enableHighAccuracy: true, maximumAge: 1000 },
     );
     return () => navigator.geolocation.clearWatch(id);
   }, []);
@@ -86,7 +90,7 @@ export default function LiveMechanicTracker({ mechanicId, mechanicName, mechanic
   useEffect(() => {
     if (!userPos || !mechPos) return;
     const now = Date.now();
-    if (now - lastEtaTs.current < 15000 && eta) return;
+    if (now - lastEtaTs.current < 8000 && eta) return;
     lastEtaTs.current = now;
     setLoadingEta(true);
     supabase.functions
@@ -115,11 +119,11 @@ export default function LiveMechanicTracker({ mechanicId, mechanicName, mechanic
         {userPos || mechPos ? (
           <MapContainer center={center} zoom={14} scrollWheelZoom style={{ height: "100%", width: "100%" }}>
             <TileLayer attribution="" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            {userPos && <Marker position={userPos} icon={userIcon}><Popup>You</Popup></Marker>}
+            {userPos && <AnimatedMarker position={userPos} icon={userIcon}><Popup>You</Popup></AnimatedMarker>}
             {mechPos && (
-              <Marker position={mechPos} icon={mechIcon}>
+              <AnimatedMarker position={mechPos} icon={mechIcon}>
                 <Popup>{mechanicName || "Mechanic"}</Popup>
-              </Marker>
+              </AnimatedMarker>
             )}
             {eta?.route?.length ? (
               <Polyline positions={eta.route} pathOptions={{ color: "hsl(263 56% 55%)", weight: 5, opacity: 0.85 }} />

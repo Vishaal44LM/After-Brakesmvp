@@ -15,9 +15,9 @@ export function useBroadcastMechanicLocation(mechanicId?: string | null, enabled
     if (!navigator.geolocation) return;
 
     const upsert = async (lat: number, lng: number, heading?: number | null, speed?: number | null) => {
-      // Throttle to one write every 5s
+      // Throttle to one write per second for low-latency tracking
       const now = Date.now();
-      if (now - lastSentRef.current < 5000) return;
+      if (now - lastSentRef.current < 1000) return;
       lastSentRef.current = now;
       await supabase.from("mechanic_locations").upsert(
         {
@@ -37,7 +37,7 @@ export function useBroadcastMechanicLocation(mechanicId?: string | null, enabled
         upsert(pos.coords.latitude, pos.coords.longitude, pos.coords.heading, pos.coords.speed);
       },
       (err) => console.warn("Mechanic geolocation error", err),
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
+      { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 },
     );
 
     return () => {
