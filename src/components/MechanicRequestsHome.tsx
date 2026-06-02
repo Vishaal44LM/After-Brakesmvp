@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { issueTypeLabel } from "@/data/issueTypes";
 import RequestMiniMap, { distanceMeters } from "@/components/RequestMiniMap";
+import LiveCustomerTracker from "@/components/LiveCustomerTracker";
 
 const mechIcon = L.divIcon({
   className: "",
@@ -365,13 +366,17 @@ function ActiveJobCard({
       {job.description && <p className="text-sm text-foreground bg-secondary/50 rounded-lg p-2">{job.description}</p>}
 
       {job.latitude != null && job.longitude != null && (
-        <RequestMiniMap userLat={job.latitude} userLng={job.longitude} height={200} />
+        <LiveCustomerTracker
+          customerUserId={job.userId}
+          fallbackLat={job.latitude}
+          fallbackLng={job.longitude}
+          customerName={job.userName}
+          customerPhone={job.userPhone}
+          onChat={onChat}
+        />
       )}
 
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant="outline" onClick={onChat}>
-          <MessageCircle className="h-3 w-3 mr-1" /> Chat
-        </Button>
         {job.userPhone && (
           <a href={`tel:${job.userPhone}`}>
             <Button size="sm" variant="secondary"><Phone className="h-3 w-3 mr-1" /> +91 {job.userPhone}</Button>
@@ -379,7 +384,7 @@ function ActiveJobCard({
         )}
         {job.latitude != null && job.longitude != null && (
           <a href={`https://www.google.com/maps/dir/?api=1&destination=${job.latitude},${job.longitude}`} target="_blank" rel="noopener noreferrer">
-            <Button size="sm" variant="secondary"><Navigation className="h-3 w-3 mr-1" /> Navigate</Button>
+            <Button size="sm" variant="secondary"><Navigation className="h-3 w-3 mr-1" /> Open in Maps</Button>
           </a>
         )}
         <Button size="sm" variant="destructive" onClick={onCancel} disabled={cancelling} className="ml-auto">

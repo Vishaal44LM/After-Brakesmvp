@@ -385,6 +385,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_locations: {
+        Row: {
+          heading: number | null
+          latitude: number
+          longitude: number
+          speed: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          heading?: number | null
+          latitude: number
+          longitude: number
+          speed?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          heading?: number | null
+          latitude?: number
+          longitude?: number
+          speed?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_pins: {
         Row: {
           created_at: string | null

@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { chennaiAreas } from "@/data/chennaiAreas";
+import { useBroadcastUserLocation } from "@/hooks/useBroadcastUserLocation";
 
 const vehicleTypes = ["Car", "Bike", "Scooter", "Auto", "Truck", "Bus", "Van"];
 const fuelTypes = ["Petrol", "Diesel", "Electric", "CNG", "Hybrid"];
@@ -379,6 +380,10 @@ const UserDashboard = () => {
   const [savingProfile, setSavingProfile] = useState(false);
   const [newVehicle, setNewVehicle] = useState({ vehicle_type: "", vehicle_brand: "", vehicle_model: "", vehicle_year: "", fuel_type: "", transmission: "" });
   const [addingVehicle, setAddingVehicle] = useState(false);
+
+  // Broadcast user GPS while an accepted job is live (for mechanic tracking)
+  const hasAcceptedJob = responses.some((r: any) => r.status === "accepted");
+  useBroadcastUserLocation(user?.id, hasAcceptedJob);
 
   useEffect(() => {
     if (profile) {
