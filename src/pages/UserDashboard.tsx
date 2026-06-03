@@ -683,8 +683,14 @@ const UserDashboard = () => {
                     <div className="mt-3 pt-3 border-t border-border space-y-3">
                       <LiveMechanicTracker
                         mechanicId={r.mechanic_id}
-                        mechanicName={r.mechanic?.garage_name}
+                        mechanicName={r.mechanic?.name || r.mechanic?.garage_name}
                         mechanicPhone={r.mechanic?.phone_number}
+                        mechanicPhotoUrl={r.mechanic?.garage_photo_url}
+                        garageName={r.mechanic?.garage_name}
+                        rating={r.mechanic?.rating}
+                        totalRatings={r.mechanic?.total_ratings}
+                        issueId={r.issue_id}
+                        onChat={() => navigate(`/chat/${r.issue_id}`)}
                       />
                       <div className="flex items-center gap-1">
                         <span className="text-xs text-muted-foreground mr-1">Rate:</span>
