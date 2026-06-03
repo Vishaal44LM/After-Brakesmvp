@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   MapPin, IndianRupee, MessageCircle, Loader2,
   Clock, Star, Edit2, Save, Camera, Store, User, Phone, Link, FileCheck,
-  Navigation
+  Navigation, Wrench
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -112,11 +112,11 @@ const MechanicDashboard = () => {
   };
 
   const handleSaveProfile = async () => {
-    if (!editName.trim() || !editGarageName.trim() || !editArea) {
-      toast.error("Fill all fields correctly");
-      return;
-    }
-    if (!editAddress.trim()) { toast.error("Garage address is mandatory"); return; }
+    if (!editName.trim()) { toast.error("Full Name is required"); return; }
+    if (!editPhoneNumber || editPhoneNumber.length < 10) { toast.error("A valid 10-digit Phone Number is required"); return; }
+    if (!editGarageName.trim()) { toast.error("Garage Name is required"); return; }
+    if (!editArea) { toast.error("Area is required"); return; }
+    if (!editAddress.trim()) { toast.error("Garage Location / Address is required"); return; }
     setSavingProfile(true);
     try {
       let photoUrl = mechanicProfile?.garage_photo_url || null;
@@ -157,8 +157,8 @@ const MechanicDashboard = () => {
       <div className="container max-w-2xl py-4 px-4">
         <Tabs defaultValue="issues" className="w-full">
           <TabsList className="grid w-full grid-cols-2 bg-secondary">
-            <TabsTrigger value="issues" className="text-xs">🛠️ Requests</TabsTrigger>
-            <TabsTrigger value="profile" className="text-xs">👤 Profile</TabsTrigger>
+            <TabsTrigger value="issues" className="text-xs gap-1.5"><Wrench className="h-3.5 w-3.5" /> Requests</TabsTrigger>
+            <TabsTrigger value="profile" className="text-xs gap-1.5"><User className="h-3.5 w-3.5" /> Profile</TabsTrigger>
           </TabsList>
 
           {/* REQUESTS HOME — map + incoming list */}
@@ -186,7 +186,7 @@ const MechanicDashboard = () => {
                   </div>
                   <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
                 </label>
-                <span className="text-xs text-muted-foreground mt-1">Change photo</span>
+                <span className="text-xs text-muted-foreground mt-1">Profile Photo (your face)</span>
               </div>
 
               <div className="space-y-3">

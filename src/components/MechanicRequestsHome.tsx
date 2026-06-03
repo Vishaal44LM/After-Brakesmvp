@@ -20,7 +20,7 @@ const mechIcon = L.divIcon({
 const userIcon = L.divIcon({
   className: "",
   html: `<div style="width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:hsl(0 70% 50%);border:3px solid white;box-shadow:0 4px 10px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;">
-    <span style="transform:rotate(45deg);color:white;font-weight:700;font-size:14px;">📍</span>
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(45deg);"><circle cx="12" cy="10" r="3"/></svg>
   </div>`,
   iconSize: [30, 30], iconAnchor: [15, 30],
 });

@@ -66,10 +66,13 @@ const MechanicSetup = () => {
   };
 
   const handleSubmit = async () => {
-    if (!name.trim()) { toast.error("Enter your name"); return; }
-    if (!garageName.trim()) { toast.error("Enter your garage name"); return; }
-    if (!area) { toast.error("Select your area"); return; }
-    if (!garageAddress.trim()) { toast.error("Enter your garage address"); return; }
+    if (!name.trim()) { toast.error("Full Name is required"); return; }
+    if (!phoneNumber || phoneNumber.length < 10) { toast.error("A valid 10-digit Phone Number is required"); return; }
+    if (!garageName.trim()) { toast.error("Garage Name is required"); return; }
+    if (!area) { toast.error("Area is required"); return; }
+    if (!garageAddress.trim()) { toast.error("Garage Address is required"); return; }
+    if (!coords) { toast.error("Garage Location is required — tap 'Use my current location'"); return; }
+    if (!garagePhoto) { toast.error("Profile Photo is required (clear photo of your face)"); return; }
     if (!idProofFile) { toast.error("Upload an ID proof"); return; }
     if (!yearsOfExperience) { toast.error("Enter years of experience"); return; }
     if (!user) { toast.error("Please login first"); return; }
@@ -150,15 +153,15 @@ const MechanicSetup = () => {
               </div>
               <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
             </label>
-            <span className="text-xs text-muted-foreground mt-2">Upload garage photo</span>
+            <span className="text-xs text-muted-foreground mt-2">Profile Photo (your face) <span className="text-destructive">*</span></span>
           </div>
 
           <div>
-            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><User className="h-4 w-4" /> Your Name</label>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><User className="h-4 w-4" /> Your Name <span className="text-destructive">*</span></label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" className="bg-secondary border-0" />
           </div>
           <div>
-            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><Store className="h-4 w-4" /> Garage Name</label>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><Store className="h-4 w-4" /> Garage Name <span className="text-destructive">*</span></label>
             <Input value={garageName} onChange={(e) => setGarageName(e.target.value)} placeholder="Your garage name" className="bg-secondary border-0" />
           </div>
           <div>
@@ -173,7 +176,7 @@ const MechanicSetup = () => {
             <Textarea value={garageAddress} onChange={(e) => setGarageAddress(e.target.value)} placeholder="Full garage address" className="bg-secondary border-0 min-h-[60px]" />
           </div>
           <div>
-            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><MapPin className="h-4 w-4" /> Garage Location <span className="text-xs">(for ETA)</span></label>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><MapPin className="h-4 w-4" /> Garage Location <span className="text-destructive">*</span></label>
             <Button type="button" variant="secondary" onClick={captureLocation} disabled={capturingLoc} className="w-full">
               {capturingLoc ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <MapPin className="h-4 w-4 mr-2" />}
               {coords ? `Captured (${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)})` : "Use my current location"}
@@ -188,7 +191,7 @@ const MechanicSetup = () => {
             <Input value={yearsOfExperience} onChange={(e) => setYearsOfExperience(e.target.value.replace(/\D/g, ""))} placeholder="e.g. 5" maxLength={2} className="bg-secondary border-0" />
           </div>
           <div>
-            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><Phone className="h-4 w-4" /> Phone Number</label>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><Phone className="h-4 w-4" /> Phone Number <span className="text-destructive">*</span></label>
             <Input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))} placeholder="10-digit number" maxLength={10} className="bg-secondary border-0" />
           </div>
           <div>

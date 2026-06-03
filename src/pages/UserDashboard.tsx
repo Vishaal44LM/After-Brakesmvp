@@ -610,9 +610,9 @@ const UserDashboard = () => {
       <div className="container max-w-2xl py-4 px-4">
         <Tabs defaultValue="nearby" className="w-full">
           <TabsList className="grid w-full grid-cols-3 bg-secondary">
-            <TabsTrigger value="nearby" className="text-xs">🗺️ Nearby</TabsTrigger>
-            <TabsTrigger value="garage" className="text-xs">📦 Glove Box</TabsTrigger>
-            <TabsTrigger value="profile" className="text-xs">👤 Profile</TabsTrigger>
+            <TabsTrigger value="nearby" className="text-xs gap-1.5"><MapPin className="h-3.5 w-3.5" /> Nearby</TabsTrigger>
+            <TabsTrigger value="garage" className="text-xs gap-1.5"><FolderOpen className="h-3.5 w-3.5" /> Glove Box</TabsTrigger>
+            <TabsTrigger value="profile" className="text-xs gap-1.5"><User className="h-3.5 w-3.5" /> Profile</TabsTrigger>
           </TabsList>
 
           {/* NEARBY = HOME (map + request flow + active jobs) */}
@@ -683,8 +683,14 @@ const UserDashboard = () => {
                     <div className="mt-3 pt-3 border-t border-border space-y-3">
                       <LiveMechanicTracker
                         mechanicId={r.mechanic_id}
-                        mechanicName={r.mechanic?.garage_name}
+                        mechanicName={r.mechanic?.name || r.mechanic?.garage_name}
                         mechanicPhone={r.mechanic?.phone_number}
+                        mechanicPhotoUrl={r.mechanic?.garage_photo_url}
+                        garageName={r.mechanic?.garage_name}
+                        rating={r.mechanic?.rating}
+                        totalRatings={r.mechanic?.total_ratings}
+                        issueId={r.issue_id}
+                        onChat={() => navigate(`/chat/${r.issue_id}`)}
                       />
                       <div className="flex items-center gap-1">
                         <span className="text-xs text-muted-foreground mr-1">Rate:</span>
