@@ -160,7 +160,7 @@ export default function LiveCustomerTracker({
       <div className="p-3 bg-card flex items-center justify-between gap-3">
         <div className="min-w-0">
           <span className={`inline-block text-[10px] px-2 py-0.5 rounded mb-1 ${arrived ? "bg-success/30 text-success" : "bg-primary/20 text-primary"}`}>
-            {arrived ? "✅ You've arrived" : "🛵 Heading to customer"}
+            {arrived ? "You've arrived at the customer" : "Heading to customer"}
           </span>
           <p className="font-semibold truncate">{customerName || "Customer"}</p>
           {!custPos && <p className="text-[11px] text-warning mt-0.5">Waiting for customer location…</p>}
