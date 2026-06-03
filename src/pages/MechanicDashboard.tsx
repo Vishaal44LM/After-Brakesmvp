@@ -157,8 +157,8 @@ const MechanicDashboard = () => {
       <div className="container max-w-2xl py-4 px-4">
         <Tabs defaultValue="issues" className="w-full">
           <TabsList className="grid w-full grid-cols-2 bg-secondary">
-            <TabsTrigger value="issues" className="text-xs">🛠️ Requests</TabsTrigger>
-            <TabsTrigger value="profile" className="text-xs">👤 Profile</TabsTrigger>
+            <TabsTrigger value="issues" className="text-xs gap-1.5"><Wrench className="h-3.5 w-3.5" /> Requests</TabsTrigger>
+            <TabsTrigger value="profile" className="text-xs gap-1.5"><User className="h-3.5 w-3.5" /> Profile</TabsTrigger>
           </TabsList>
 
           {/* REQUESTS HOME — map + incoming list */}
