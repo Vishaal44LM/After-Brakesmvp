@@ -10,14 +10,14 @@ import AnimatedMarker from "./AnimatedMarker";
 const customerIcon = L.divIcon({
   className: "",
   html: `<div style="width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:hsl(0 70% 50%);border:3px solid white;box-shadow:0 4px 10px rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;">
-    <span style="transform:rotate(45deg);font-size:14px;">📍</span>
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(45deg);"><circle cx="12" cy="10" r="3"/></svg>
   </div>`,
   iconSize: [30, 30], iconAnchor: [15, 30],
 });
 const meIcon = L.divIcon({
   className: "",
   html: `<div style="width:36px;height:36px;border-radius:50%;background:hsl(263 56% 50%);border:3px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.45);">
-    <span style="font-size:18px;">🛵</span>
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
   </div>`,
   iconSize: [36, 36], iconAnchor: [18, 18],
 });
