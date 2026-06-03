@@ -153,7 +153,7 @@ const MechanicSetup = () => {
               </div>
               <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
             </label>
-            <span className="text-xs text-muted-foreground mt-2">Upload garage photo</span>
+            <span className="text-xs text-muted-foreground mt-2">Profile Photo (your face) <span className="text-destructive">*</span></span>
           </div>
 
           <div>
