@@ -66,10 +66,13 @@ const MechanicSetup = () => {
   };
 
   const handleSubmit = async () => {
-    if (!name.trim()) { toast.error("Enter your name"); return; }
-    if (!garageName.trim()) { toast.error("Enter your garage name"); return; }
-    if (!area) { toast.error("Select your area"); return; }
-    if (!garageAddress.trim()) { toast.error("Enter your garage address"); return; }
+    if (!name.trim()) { toast.error("Full Name is required"); return; }
+    if (!phoneNumber || phoneNumber.length < 10) { toast.error("A valid 10-digit Phone Number is required"); return; }
+    if (!garageName.trim()) { toast.error("Garage Name is required"); return; }
+    if (!area) { toast.error("Area is required"); return; }
+    if (!garageAddress.trim()) { toast.error("Garage Address is required"); return; }
+    if (!coords) { toast.error("Garage Location is required — tap 'Use my current location'"); return; }
+    if (!garagePhoto) { toast.error("Profile Photo is required (clear photo of your face)"); return; }
     if (!idProofFile) { toast.error("Upload an ID proof"); return; }
     if (!yearsOfExperience) { toast.error("Enter years of experience"); return; }
     if (!user) { toast.error("Please login first"); return; }
