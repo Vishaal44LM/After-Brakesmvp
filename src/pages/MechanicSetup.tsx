@@ -157,11 +157,11 @@ const MechanicSetup = () => {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><User className="h-4 w-4" /> Your Name</label>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><User className="h-4 w-4" /> Your Name <span className="text-destructive">*</span></label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" className="bg-secondary border-0" />
           </div>
           <div>
-            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><Store className="h-4 w-4" /> Garage Name</label>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><Store className="h-4 w-4" /> Garage Name <span className="text-destructive">*</span></label>
             <Input value={garageName} onChange={(e) => setGarageName(e.target.value)} placeholder="Your garage name" className="bg-secondary border-0" />
           </div>
           <div>
