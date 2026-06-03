@@ -191,7 +191,7 @@ const MechanicSetup = () => {
             <Input value={yearsOfExperience} onChange={(e) => setYearsOfExperience(e.target.value.replace(/\D/g, ""))} placeholder="e.g. 5" maxLength={2} className="bg-secondary border-0" />
           </div>
           <div>
-            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><Phone className="h-4 w-4" /> Phone Number</label>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2"><Phone className="h-4 w-4" /> Phone Number <span className="text-destructive">*</span></label>
             <Input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))} placeholder="10-digit number" maxLength={10} className="bg-secondary border-0" />
           </div>
           <div>
