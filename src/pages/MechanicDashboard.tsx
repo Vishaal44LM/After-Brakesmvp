@@ -112,11 +112,11 @@ const MechanicDashboard = () => {
   };
 
   const handleSaveProfile = async () => {
-    if (!editName.trim() || !editGarageName.trim() || !editArea) {
-      toast.error("Fill all fields correctly");
-      return;
-    }
-    if (!editAddress.trim()) { toast.error("Garage address is mandatory"); return; }
+    if (!editName.trim()) { toast.error("Full Name is required"); return; }
+    if (!editPhoneNumber || editPhoneNumber.length < 10) { toast.error("A valid 10-digit Phone Number is required"); return; }
+    if (!editGarageName.trim()) { toast.error("Garage Name is required"); return; }
+    if (!editArea) { toast.error("Area is required"); return; }
+    if (!editAddress.trim()) { toast.error("Garage Location / Address is required"); return; }
     setSavingProfile(true);
     try {
       let photoUrl = mechanicProfile?.garage_photo_url || null;
