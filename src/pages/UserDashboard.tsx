@@ -610,9 +610,9 @@ const UserDashboard = () => {
       <div className="container max-w-2xl py-4 px-4">
         <Tabs defaultValue="nearby" className="w-full">
           <TabsList className="grid w-full grid-cols-3 bg-secondary">
-            <TabsTrigger value="nearby" className="text-xs">🗺️ Nearby</TabsTrigger>
-            <TabsTrigger value="garage" className="text-xs">📦 Glove Box</TabsTrigger>
-            <TabsTrigger value="profile" className="text-xs">👤 Profile</TabsTrigger>
+            <TabsTrigger value="nearby" className="text-xs gap-1.5"><MapPin className="h-3.5 w-3.5" /> Nearby</TabsTrigger>
+            <TabsTrigger value="garage" className="text-xs gap-1.5"><FolderOpen className="h-3.5 w-3.5" /> Glove Box</TabsTrigger>
+            <TabsTrigger value="profile" className="text-xs gap-1.5"><User className="h-3.5 w-3.5" /> Profile</TabsTrigger>
           </TabsList>
 
           {/* NEARBY = HOME (map + request flow + active jobs) */}
