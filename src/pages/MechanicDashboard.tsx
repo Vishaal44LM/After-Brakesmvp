@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   MapPin, IndianRupee, MessageCircle, Loader2,
   Clock, Star, Edit2, Save, Camera, Store, User, Phone, Link, FileCheck,
-  Navigation
+  Navigation, Wrench
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
