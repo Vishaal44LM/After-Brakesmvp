@@ -272,38 +272,33 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
           </Button>
 
           <div className="space-y-2 pt-1">
-            <label className="text-xs font-medium text-muted-foreground">What's the problem?</label>
-            <Select value={issueType} onValueChange={setIssueType}>
-              <SelectTrigger className="bg-secondary border-0">
-                <SelectValue placeholder="Select issue type" />
-              </SelectTrigger>
-              <SelectContent position="popper" side="bottom" sideOffset={4} avoidCollisions={false} className="w-[var(--radix-select-trigger-width)]">
-                {ISSUE_TYPES.map((t) => {
-                  const Icon = t.icon;
-                  return (
-                    <SelectItem key={t.value} value={t.value}>
-                      <span className="inline-flex items-center gap-2">
-                        <Icon className="h-4 w-4 text-primary" />
-                        {t.label}
-                      </span>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
+            <label className="text-xs font-medium text-muted-foreground">What's the problem? <span className="text-destructive">*</span></label>
+            <select
+              value={issueType}
+              onChange={(e) => setIssueType(e.target.value)}
+              className={nativeSelectClass}
+            >
+              <option value="">Select issue type</option>
+              {ISSUE_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
             {vehicles.length > 0 && (
-              <Select value={vehicleId} onValueChange={setVehicleId}>
-                <SelectTrigger className="bg-secondary border-0">
-                  <SelectValue placeholder="Select vehicle (optional)" />
-                </SelectTrigger>
-                <SelectContent position="popper" side="bottom" sideOffset={4} avoidCollisions={false} className="w-[var(--radix-select-trigger-width)]">
+              <>
+                <label className="text-xs font-medium text-muted-foreground">Vehicle <span className="text-destructive">*</span></label>
+                <select
+                  value={vehicleId}
+                  onChange={(e) => setVehicleId(e.target.value)}
+                  className={nativeSelectClass}
+                >
+                  <option value="">Select your vehicle</option>
                   {vehicles.map((v: any) => (
-                    <SelectItem key={v.id} value={v.id}>
+                    <option key={v.id} value={v.id}>
                       {v.vehicle_type} {v.vehicle_brand} {v.vehicle_model}
-                    </SelectItem>
+                    </option>
                   ))}
-                </SelectContent>
-              </Select>
+                </select>
+              </>
             )}
             <Textarea
               value={description}
