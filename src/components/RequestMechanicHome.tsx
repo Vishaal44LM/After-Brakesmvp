@@ -4,12 +4,14 @@ import L from "leaflet";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, MapPin, Send, AlertTriangle, Search, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { ISSUE_TYPES } from "@/data/issueTypes";
+
+const nativeSelectClass =
+  "w-full h-10 px-3 rounded-md bg-secondary border-0 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring appearance-none bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23999%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>')] bg-no-repeat bg-[right_12px_center] pr-8";
 
 const userIcon = L.divIcon({
   className: "",
@@ -175,6 +177,7 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
   const handleRequest = async () => {
     if (!user) { toast.error("Please log in"); return; }
     if (!issueType) { toast.error("Select what's wrong"); return; }
+    if (vehicles.length > 0 && !vehicleId) { toast.error("Please select your vehicle"); return; }
     if (!userPos) { toast.error("Waiting for your location…"); return; }
 
     setRequesting(true);
@@ -269,38 +272,33 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
           </Button>
 
           <div className="space-y-2 pt-1">
-            <label className="text-xs font-medium text-muted-foreground">What's the problem?</label>
-            <Select value={issueType} onValueChange={setIssueType}>
-              <SelectTrigger className="bg-secondary border-0">
-                <SelectValue placeholder="Select issue type" />
-              </SelectTrigger>
-              <SelectContent position="popper" side="bottom" sideOffset={4} avoidCollisions={false} className="w-[var(--radix-select-trigger-width)]">
-                {ISSUE_TYPES.map((t) => {
-                  const Icon = t.icon;
-                  return (
-                    <SelectItem key={t.value} value={t.value}>
-                      <span className="inline-flex items-center gap-2">
-                        <Icon className="h-4 w-4 text-primary" />
-                        {t.label}
-                      </span>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
+            <label className="text-xs font-medium text-muted-foreground">What's the problem? <span className="text-destructive">*</span></label>
+            <select
+              value={issueType}
+              onChange={(e) => setIssueType(e.target.value)}
+              className={nativeSelectClass}
+            >
+              <option value="">Select issue type</option>
+              {ISSUE_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
             {vehicles.length > 0 && (
-              <Select value={vehicleId} onValueChange={setVehicleId}>
-                <SelectTrigger className="bg-secondary border-0">
-                  <SelectValue placeholder="Select vehicle (optional)" />
-                </SelectTrigger>
-                <SelectContent position="popper" side="bottom" sideOffset={4} avoidCollisions={false} className="w-[var(--radix-select-trigger-width)]">
+              <>
+                <label className="text-xs font-medium text-muted-foreground">Vehicle <span className="text-destructive">*</span></label>
+                <select
+                  value={vehicleId}
+                  onChange={(e) => setVehicleId(e.target.value)}
+                  className={nativeSelectClass}
+                >
+                  <option value="">Select your vehicle</option>
                   {vehicles.map((v: any) => (
-                    <SelectItem key={v.id} value={v.id}>
+                    <option key={v.id} value={v.id}>
                       {v.vehicle_type} {v.vehicle_brand} {v.vehicle_model}
-                    </SelectItem>
+                    </option>
                   ))}
-                </SelectContent>
-              </Select>
+                </select>
+              </>
             )}
             <Textarea
               value={description}

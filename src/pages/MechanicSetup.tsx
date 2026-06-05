@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { User, Store, MapPin, Camera, Loader2, ArrowLeft, FileCheck, Clock, Link, Phone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import FaceCapture from "@/components/FaceCapture";
 
 const MechanicSetup = () => {
   const navigate = useNavigate();
@@ -45,14 +46,9 @@ const MechanicSetup = () => {
     );
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setGaragePhoto(file);
-      const reader = new FileReader();
-      reader.onload = () => setGaragePhotoPreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
+  const handleFaceCaptured = (file: File, previewUrl: string) => {
+    setGaragePhoto(file);
+    setGaragePhotoPreview(previewUrl);
   };
 
   const handleIdProofUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -143,17 +139,10 @@ const MechanicSetup = () => {
 
         <div className="bg-card rounded-xl p-6 border border-border space-y-4 animate-slide-up">
           <div className="flex flex-col items-center">
-            <label className="cursor-pointer group">
-              <div className="h-24 w-24 rounded-full bg-secondary border-2 border-dashed border-border flex items-center justify-center overflow-hidden group-hover:border-primary transition-colors">
-                {garagePhotoPreview ? (
-                  <img src={garagePhotoPreview} alt="Garage" className="h-full w-full object-cover" />
-                ) : (
-                  <Camera className="h-8 w-8 text-muted-foreground" />
-                )}
-              </div>
-              <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
-            </label>
-            <span className="text-xs text-muted-foreground mt-2">Profile Photo (your face) <span className="text-destructive">*</span></span>
+            <FaceCapture onCaptured={handleFaceCaptured} previewUrl={garagePhotoPreview} />
+            <span className="text-xs text-muted-foreground mt-2 text-center">
+              Profile Photo — live face scan only <span className="text-destructive">*</span>
+            </span>
           </div>
 
           <div>
