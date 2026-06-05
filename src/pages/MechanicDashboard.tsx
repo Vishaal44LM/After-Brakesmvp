@@ -18,6 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { chennaiAreas } from "@/data/chennaiAreas";
 import { useBroadcastMechanicLocation } from "@/hooks/useBroadcastMechanicLocation";
 import MechanicRequestsHome from "@/components/MechanicRequestsHome";
+import LocationPermissionGate from "@/components/LocationPermissionGate";
 
 const MechanicDashboard = () => {
   const navigate = useNavigate();
