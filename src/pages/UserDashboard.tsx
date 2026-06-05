@@ -607,6 +607,7 @@ const UserDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background pb-36">
+      <LocationPermissionGate />
       <Navbar role="user" onLogout={handleLogout} />
       <div className="container max-w-2xl py-4 px-4">
         <Tabs defaultValue="nearby" className="w-full">
