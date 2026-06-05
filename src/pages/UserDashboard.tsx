@@ -14,6 +14,7 @@ import {
 import AIMechanicCharacter from "@/components/AIMechanicCharacter";
 import RequestMechanicHome from "@/components/RequestMechanicHome";
 import LiveMechanicTracker from "@/components/LiveMechanicTracker";
+import LocationPermissionGate from "@/components/LocationPermissionGate";
 import { issueTypeLabel } from "@/data/issueTypes";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
