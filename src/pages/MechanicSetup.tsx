@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { User, Store, MapPin, Camera, Loader2, ArrowLeft, FileCheck, Clock, Link, Phone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import FaceCapture from "@/components/FaceCapture";
 
 const MechanicSetup = () => {
   const navigate = useNavigate();
