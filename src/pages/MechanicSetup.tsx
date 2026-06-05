@@ -46,14 +46,9 @@ const MechanicSetup = () => {
     );
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setGaragePhoto(file);
-      const reader = new FileReader();
-      reader.onload = () => setGaragePhotoPreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
+  const handleFaceCaptured = (file: File, previewUrl: string) => {
+    setGaragePhoto(file);
+    setGaragePhotoPreview(previewUrl);
   };
 
   const handleIdProofUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
