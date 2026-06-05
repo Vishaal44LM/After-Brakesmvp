@@ -177,6 +177,7 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
   const handleRequest = async () => {
     if (!user) { toast.error("Please log in"); return; }
     if (!issueType) { toast.error("Select what's wrong"); return; }
+    if (vehicles.length > 0 && !vehicleId) { toast.error("Please select your vehicle"); return; }
     if (!userPos) { toast.error("Waiting for your location…"); return; }
 
     setRequesting(true);
