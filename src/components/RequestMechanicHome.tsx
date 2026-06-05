@@ -89,26 +89,29 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
     })();
   }, []);
 
-  // 2b. Restore active outgoing request on mount (persistence across refresh/login)
+  // 2b. Restore active outgoing request ONLY if it's recent and has no responses yet.
+  // Prevents old "open" issues (e.g. from Find Mechanics flow) from re-triggering
+  // the "Looking for mechanics" overlay on every visit to the Nearby tab.
   useEffect(() => {
     if (!user) return;
     (async () => {
+      const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
       const { data: openIssues } = await supabase
         .from("issues")
         .select("id, status, created_at")
         .eq("user_id", user.id)
         .eq("status", "open")
+        .gte("created_at", cutoff)
         .order("created_at", { ascending: false })
         .limit(5);
       if (!openIssues?.length) return;
-      // Find one that has NO accepted response
       const ids = openIssues.map((i: any) => i.id);
       const { data: resps } = await supabase
         .from("mechanic_responses")
-        .select("issue_id,status")
+        .select("issue_id")
         .in("issue_id", ids);
-      const acceptedSet = new Set((resps || []).filter((r: any) => r.status === "accepted").map((r: any) => r.issue_id));
-      const stillLooking = openIssues.find((i: any) => !acceptedSet.has(i.id));
+      const respondedSet = new Set((resps || []).map((r: any) => r.issue_id));
+      const stillLooking = openIssues.find((i: any) => !respondedSet.has(i.id));
       if (stillLooking) setActiveIssueId(stillLooking.id);
     })();
   }, [user]);
