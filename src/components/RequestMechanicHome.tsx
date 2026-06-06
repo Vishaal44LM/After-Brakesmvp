@@ -228,7 +228,7 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
     if (!user) { toast.error("Please log in"); return; }
     if (!issueType) { toast.error("Select what's wrong"); return; }
     if (vehicles.length > 0 && !vehicleId) { toast.error("Please select your vehicle"); return; }
-    if (!userPos) { toast.error("Waiting for your location…"); return; }
+    if (!userPos) { toast.error("Set your location — type your address or enable GPS"); return; }
 
     setRequesting(true);
     try {
@@ -236,7 +236,10 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
         .from("issues")
         .insert({
           user_id: user.id,
-          description: description || ISSUE_TYPES.find(t => t.value === issueType)?.label || "Service request",
+          description: [
+            description,
+            address ? `Address: ${address}` : null,
+          ].filter(Boolean).join("\n\n") || ISSUE_TYPES.find(t => t.value === issueType)?.label || "Service request",
           issue_type: issueType,
           vehicle_id: vehicleId || null,
           area: profile?.area || null,
@@ -271,13 +274,36 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
 
   return (
     <div className="space-y-4 relative">
+      <div className="px-1">
+        <AddressSearch
+          initialQuery={address}
+          near={userPos ? { lat: userPos[0], lng: userPos[1] } : { lat: CHENNAI_FALLBACK[0], lng: CHENNAI_FALLBACK[1] }}
+          onSelect={(r) => {
+            setUserPos([r.lat, r.lng]);
+            setAddress(r.display_name);
+            setLocError(null);
+            persistLoc(r.lat, r.lng, r.display_name);
+          }}
+        />
+      </div>
       <Card className="overflow-hidden border-border/60 relative">
         <div className="h-[320px] sm:h-[420px] w-full">
           {userPos ? (
             <MapContainer center={center} zoom={13} scrollWheelZoom style={{ height: "100%", width: "100%" }} className="rounded-t-lg">
               <TileLayer attribution="" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              <Marker position={userPos} icon={userIcon}>
-                <Popup>You are here</Popup>
+              <Marker
+                position={userPos}
+                icon={userIcon}
+                draggable
+                eventHandlers={{
+                  dragend: (e) => {
+                    const ll = (e.target as L.Marker).getLatLng();
+                    setUserPos([ll.lat, ll.lng]);
+                    persistLoc(ll.lat, ll.lng, address);
+                  },
+                }}
+              >
+                <Popup>Drag to adjust — this is where the mechanic will come</Popup>
               </Marker>
               {mechanics
                 .filter((m) => m.latitude != null && m.longitude != null)
@@ -290,7 +316,8 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
                     </Popup>
                   </Marker>
                 ))}
-              <FitBounds points={allPoints} />
+              <FlyTo pos={userPos} />
+              {!address && <FitBounds points={allPoints} />}
             </MapContainer>
           ) : (
             <div className="h-full w-full flex items-center justify-center bg-muted">
