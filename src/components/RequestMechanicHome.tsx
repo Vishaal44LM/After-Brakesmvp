@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { ISSUE_TYPES } from "@/data/issueTypes";
+import AddressSearch from "@/components/AddressSearch";
 
 const nativeSelectClass =
   "w-full h-10 px-3 rounded-md bg-secondary border-0 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring appearance-none bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23999%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>')] bg-no-repeat bg-[right_12px_center] pr-8";
@@ -45,9 +46,36 @@ type Props = {
   onActiveIssue: (issueId: string | null) => void;
 };
 
+type SavedLoc = { lat: number; lng: number; address?: string };
+
+function loadSavedLoc(): SavedLoc | null {
+  try {
+    const raw = localStorage.getItem("user_pinned_loc");
+    if (raw) return JSON.parse(raw);
+    const sess = sessionStorage.getItem("user_coords");
+    if (sess) {
+      const { lat, lng } = JSON.parse(sess);
+      return { lat, lng };
+    }
+  } catch {}
+  return null;
+}
+
+function FlyTo({ pos }: { pos: [number, number] | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (pos) map.flyTo(pos, Math.max(map.getZoom(), 15), { duration: 0.6 });
+  }, [pos, map]);
+  return null;
+}
+
 export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) {
   const { user, profile } = useAuth();
-  const [userPos, setUserPos] = useState<[number, number] | null>(null);
+  const initial = loadSavedLoc();
+  const [userPos, setUserPos] = useState<[number, number] | null>(
+    initial ? [initial.lat, initial.lng] : null,
+  );
+  const [address, setAddress] = useState<string>(initial?.address || "");
   const [locError, setLocError] = useState<string | null>(null);
   const [mechanics, setMechanics] = useState<any[]>([]);
   const [loadingMechs, setLoadingMechs] = useState(true);
@@ -57,25 +85,47 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
   const [vehicleId, setVehicleId] = useState("");
   const [requesting, setRequesting] = useState(false);
 
-  // Active outgoing request waiting for acceptance
   const [activeIssueId, setActiveIssueId] = useState<string | null>(null);
   const pollRef = useRef<number | null>(null);
 
-  // 1. Geolocation
+  const persistLoc = (lat: number, lng: number, addr?: string) => {
+    try {
+      localStorage.setItem("user_pinned_loc", JSON.stringify({ lat, lng, address: addr }));
+    } catch {}
+  };
+
+  // 1. Geolocation — handle every error code distinctly. Don't overwrite a manually-pinned address.
   useEffect(() => {
+    if (initial) return;
     if (!navigator.geolocation) {
-      setLocError("Geolocation not supported.");
+      setLocError("Geolocation not supported in this browser. Search your address above.");
       setUserPos(CHENNAI_FALLBACK);
       return;
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => setUserPos([pos.coords.latitude, pos.coords.longitude]),
-      () => {
-        setLocError("Location permission denied. Showing Chennai by default.");
+      (err) => {
+        const msg =
+          err.code === err.PERMISSION_DENIED
+            ? "Location permission denied. Type your address above or update browser settings."
+            : err.code === err.POSITION_UNAVAILABLE
+            ? "Couldn't determine your position. Type your address above."
+            : err.code === err.TIMEOUT
+            ? "Location request timed out. Type your address above."
+            : "Couldn't get your location. Type your address above.";
+        setLocError(msg);
         setUserPos(CHENNAI_FALLBACK);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
     );
+    // Listen for location events emitted by the permission gate.
+    const onCoords = (e: any) => {
+      if (!e?.detail) return;
+      setUserPos([e.detail.lat, e.detail.lng]);
+      setLocError(null);
+    };
+    window.addEventListener("user-coords", onCoords);
+    return () => window.removeEventListener("user-coords", onCoords);
   }, []);
 
   // 2. Load available mechanics for map markers
@@ -178,7 +228,7 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
     if (!user) { toast.error("Please log in"); return; }
     if (!issueType) { toast.error("Select what's wrong"); return; }
     if (vehicles.length > 0 && !vehicleId) { toast.error("Please select your vehicle"); return; }
-    if (!userPos) { toast.error("Waiting for your location…"); return; }
+    if (!userPos) { toast.error("Set your location — type your address or enable GPS"); return; }
 
     setRequesting(true);
     try {
@@ -186,7 +236,10 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
         .from("issues")
         .insert({
           user_id: user.id,
-          description: description || ISSUE_TYPES.find(t => t.value === issueType)?.label || "Service request",
+          description: [
+            description,
+            address ? `Address: ${address}` : null,
+          ].filter(Boolean).join("\n\n") || ISSUE_TYPES.find(t => t.value === issueType)?.label || "Service request",
           issue_type: issueType,
           vehicle_id: vehicleId || null,
           area: profile?.area || null,
@@ -221,13 +274,36 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
 
   return (
     <div className="space-y-4 relative">
+      <div className="px-1">
+        <AddressSearch
+          initialQuery={address}
+          near={userPos ? { lat: userPos[0], lng: userPos[1] } : { lat: CHENNAI_FALLBACK[0], lng: CHENNAI_FALLBACK[1] }}
+          onSelect={(r) => {
+            setUserPos([r.lat, r.lng]);
+            setAddress(r.display_name);
+            setLocError(null);
+            persistLoc(r.lat, r.lng, r.display_name);
+          }}
+        />
+      </div>
       <Card className="overflow-hidden border-border/60 relative">
         <div className="h-[320px] sm:h-[420px] w-full">
           {userPos ? (
             <MapContainer center={center} zoom={13} scrollWheelZoom style={{ height: "100%", width: "100%" }} className="rounded-t-lg">
               <TileLayer attribution="" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              <Marker position={userPos} icon={userIcon}>
-                <Popup>You are here</Popup>
+              <Marker
+                position={userPos}
+                icon={userIcon}
+                draggable
+                eventHandlers={{
+                  dragend: (e) => {
+                    const ll = (e.target as L.Marker).getLatLng();
+                    setUserPos([ll.lat, ll.lng]);
+                    persistLoc(ll.lat, ll.lng, address);
+                  },
+                }}
+              >
+                <Popup>Drag to adjust — this is where the mechanic will come</Popup>
               </Marker>
               {mechanics
                 .filter((m) => m.latitude != null && m.longitude != null)
@@ -240,7 +316,8 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
                     </Popup>
                   </Marker>
                 ))}
-              <FitBounds points={allPoints} />
+              <FlyTo pos={userPos} />
+              {!address && <FitBounds points={allPoints} />}
             </MapContainer>
           ) : (
             <div className="h-full w-full flex items-center justify-center bg-muted">
