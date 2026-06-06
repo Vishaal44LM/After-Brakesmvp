@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Camera, RefreshCw, Loader2, CheckCircle2, ShieldAlert } from "lucide-react";
+import { Camera, RefreshCw, Loader2, CheckCircle2, ShieldAlert, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 type Props = {
@@ -8,16 +8,24 @@ type Props = {
   previewUrl?: string | null;
 };
 
-// Live camera face-capture. Forces a real-time selfie (no disk uploads),
-// uses the browser FaceDetector API when available to verify a face is present.
+/**
+ * Live camera face-capture with graceful fallbacks:
+ *   1. Open camera with getUserMedia.
+ *   2. If FaceDetector API exists, draw a "face detected" indicator (advisory only).
+ *   3. If camera is unavailable OR FaceDetector is missing, allow a photo upload —
+ *      we still validate the file is an image and isn't empty, so mechanics are
+ *      never blocked from onboarding because of browser limitations.
+ */
 export default function FaceCapture({ onCaptured, previewUrl }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [active, setActive] = useState(false);
   const [starting, setStarting] = useState(false);
   const [faceDetected, setFaceDetected] = useState(false);
   const [supportsDetection, setSupportsDetection] = useState(false);
   const [capturing, setCapturing] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   useEffect(() => {
     setSupportsDetection(typeof (window as any).FaceDetector === "function");
@@ -33,7 +41,20 @@ export default function FaceCapture({ onCaptured, previewUrl }: Props) {
 
   const startCamera = async () => {
     setStarting(true);
+    setCameraError(null);
     try {
+      // Pre-check permission where supported (non-fatal if it isn't).
+      try {
+        if ("permissions" in navigator) {
+          const status = await (navigator as any).permissions.query({ name: "camera" as PermissionName });
+          if (status.state === "denied") {
+            setCameraError("Camera blocked. Enable camera permission in your browser settings.");
+            setStarting(false);
+            return;
+          }
+        }
+      } catch { /* permissions.query may not support 'camera' on all browsers */ }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 640 } },
         audio: false,
@@ -47,10 +68,19 @@ export default function FaceCapture({ onCaptured, previewUrl }: Props) {
       if (typeof (window as any).FaceDetector === "function") {
         detectLoop();
       } else {
-        setFaceDetected(true); // can't verify; allow capture
+        setFaceDetected(true);
       }
-    } catch (e: any) {
-      toast.error(e?.message || "Could not access camera");
+    } catch (err: any) {
+      const name = err?.name || "";
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        setCameraError("Camera permission denied. Allow camera access in your browser settings.");
+      } else if (name === "NotFoundError" || name === "OverconstrainedError") {
+        setCameraError("No camera found on this device.");
+      } else if (name === "NotReadableError") {
+        setCameraError("Camera is already in use by another app. Close it and try again.");
+      } else {
+        setCameraError(err?.message || "Could not access camera. You can upload a photo instead.");
+      }
     } finally {
       setStarting(false);
     }
@@ -66,7 +96,7 @@ export default function FaceCapture({ onCaptured, previewUrl }: Props) {
         const faces = await detector.detect(videoRef.current);
         setFaceDetected(faces && faces.length > 0);
       } catch {
-        setFaceDetected(true); // detector failed, fall back to permissive
+        setFaceDetected(true);
       }
       if (streamRef.current) setTimeout(tick, 500);
     };
@@ -75,10 +105,6 @@ export default function FaceCapture({ onCaptured, previewUrl }: Props) {
 
   const capture = async () => {
     if (!videoRef.current) return;
-    if (supportsDetection && !faceDetected) {
-      toast.error("No face detected — please face the camera clearly");
-      return;
-    }
     setCapturing(true);
     try {
       const v = videoRef.current;
@@ -99,6 +125,38 @@ export default function FaceCapture({ onCaptured, previewUrl }: Props) {
     } finally {
       setCapturing(false);
     }
+  };
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Please choose an image file"); return; }
+    if (file.size === 0) { toast.error("This file is empty"); return; }
+    if (file.size > 8 * 1024 * 1024) { toast.error("Image is larger than 8 MB"); return; }
+
+    // Best-effort face check on uploaded image (advisory only — never blocks).
+    if (typeof (window as any).FaceDetector === "function") {
+      try {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(); img.src = url; });
+        const det = new (window as any).FaceDetector({ fastMode: true, maxDetectedFaces: 2 });
+        const faces = await det.detect(img);
+        URL.revokeObjectURL(url);
+        if (!faces || faces.length === 0) {
+          toast.error("No face detected in the photo — please upload a clear selfie");
+          return;
+        }
+        if (faces.length > 1) {
+          toast.error("Photo must contain only one person");
+          return;
+        }
+      } catch { /* fall through — accept the photo */ }
+    }
+
+    const url = URL.createObjectURL(file);
+    onCaptured(file, url);
+    toast.success("Photo uploaded");
   };
 
   return (
@@ -133,12 +191,16 @@ export default function FaceCapture({ onCaptured, previewUrl }: Props) {
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground gap-2 p-4 text-center">
             <Camera className="h-8 w-8" />
-            <span className="text-xs">Live camera capture only — for security, we don't accept uploaded photos.</span>
+            <span className="text-xs">Live selfie preferred — upload a clear photo if your camera isn't available.</span>
           </div>
         )}
       </div>
 
-      <div className="flex gap-2 justify-center">
+      {cameraError && (
+        <p className="text-[11px] text-destructive text-center max-w-[260px] mx-auto">{cameraError}</p>
+      )}
+
+      <div className="flex flex-wrap gap-2 justify-center">
         {!active && (
           <Button type="button" variant="secondary" size="sm" onClick={startCamera} disabled={starting}>
             {starting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Camera className="h-4 w-4 mr-2" />}
@@ -150,18 +212,33 @@ export default function FaceCapture({ onCaptured, previewUrl }: Props) {
             <Button type="button" variant="outline" size="sm" onClick={stopStream}>
               <RefreshCw className="h-4 w-4 mr-2" /> Cancel
             </Button>
-            <Button type="button" size="sm" onClick={capture} disabled={capturing || (supportsDetection && !faceDetected)}>
+            <Button type="button" size="sm" onClick={capture} disabled={capturing}>
               {capturing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Camera className="h-4 w-4 mr-2" />}
               Capture
             </Button>
           </>
         )}
+        {!active && (
+          <>
+            <Button type="button" variant="ghost" size="sm" onClick={() => fileInputRef.current?.click()}>
+              <Upload className="h-4 w-4 mr-2" /> Upload photo
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="user"
+              className="hidden"
+              onChange={handleUpload}
+            />
+          </>
+        )}
       </div>
-      {!supportsDetection && active && (
-        <p className="text-[10px] text-muted-foreground text-center">
-          Face detection not supported on this browser — please ensure your face is clearly visible before capturing.
-        </p>
-      )}
+      <p className="text-[10px] text-muted-foreground text-center">
+        {supportsDetection
+          ? "Face detection is enabled — ensure your face is clearly visible."
+          : "Face detection isn't supported in this browser — please use a clear front-facing photo of just yourself."}
+      </p>
     </div>
   );
 }
