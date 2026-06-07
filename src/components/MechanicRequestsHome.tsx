@@ -306,7 +306,15 @@ export default function MechanicRequestsHome() {
                 <Car className="h-3 w-3" /> {j.vehicleLabel}
               </p>
             )}
-            {j.description && <p className="text-sm text-foreground">{j.description}</p>}
+            {j.description && (
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <MessageSquareQuote className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-[10px] uppercase tracking-wide font-semibold text-primary">Customer's message</span>
+                </div>
+                <p className="text-sm text-foreground whitespace-pre-wrap leading-snug">{j.description}</p>
+              </div>
+            )}
 
             {j.latitude != null && j.longitude != null && (
               <RequestMiniMap userLat={j.latitude} userLng={j.longitude} height={140} />
