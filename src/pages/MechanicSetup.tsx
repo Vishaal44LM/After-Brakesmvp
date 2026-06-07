@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { User, Store, MapPin, Camera, Loader2, ArrowLeft, FileCheck, Clock, Link, Phone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import FaceCapture from "@/components/FaceCapture";
+
 
 const MechanicSetup = () => {
   const navigate = useNavigate();
@@ -46,9 +46,17 @@ const MechanicSetup = () => {
     );
   };
 
-  const handleFaceCaptured = (file: File, previewUrl: string) => {
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!allowed.includes(file.type)) { toast.error("Use JPG, PNG, or WEBP"); return; }
+    if (file.size === 0) { toast.error("This file is empty"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5 MB"); return; }
     setGaragePhoto(file);
-    setGaragePhotoPreview(previewUrl);
+    const reader = new FileReader();
+    reader.onload = () => setGaragePhotoPreview(reader.result as string);
+    reader.readAsDataURL(file);
   };
 
   const handleIdProofUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,7 +76,7 @@ const MechanicSetup = () => {
     if (!area) { toast.error("Area is required"); return; }
     if (!garageAddress.trim()) { toast.error("Garage Address is required"); return; }
     if (!coords) { toast.error("Garage Location is required — tap 'Use my current location'"); return; }
-    if (!garagePhoto) { toast.error("Profile Photo is required (clear photo of your face)"); return; }
+    if (!garagePhoto) { toast.error("Profile Photo is required"); return; }
     if (!idProofFile) { toast.error("Upload an ID proof"); return; }
     if (!yearsOfExperience) { toast.error("Enter years of experience"); return; }
     if (!user) { toast.error("Please login first"); return; }
@@ -139,9 +147,23 @@ const MechanicSetup = () => {
 
         <div className="bg-card rounded-xl p-6 border border-border space-y-4 animate-slide-up">
           <div className="flex flex-col items-center">
-            <FaceCapture onCaptured={handleFaceCaptured} previewUrl={garagePhotoPreview} />
+            <label className="cursor-pointer group">
+              <div className="relative h-28 w-28 rounded-full overflow-hidden bg-secondary border-2 border-dashed border-border flex items-center justify-center">
+                {garagePhotoPreview ? (
+                  <img src={garagePhotoPreview} alt="Profile" className="h-full w-full object-cover" />
+                ) : (
+                  <Camera className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
+                )}
+              </div>
+              <input
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                className="hidden"
+                onChange={handlePhotoUpload}
+              />
+            </label>
             <span className="text-xs text-muted-foreground mt-2 text-center">
-              Profile Photo — live face scan only <span className="text-destructive">*</span>
+              {garagePhotoPreview ? "Tap photo to change" : "Upload Profile Photo (JPG, PNG, WEBP)"} <span className="text-destructive">*</span>
             </span>
           </div>
 

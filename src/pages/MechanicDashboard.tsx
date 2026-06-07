@@ -188,7 +188,7 @@ const MechanicDashboard = () => {
                   </div>
                   <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
                 </label>
-                <span className="text-xs text-muted-foreground mt-1">Profile Photo (your face)</span>
+                <span className="text-xs text-muted-foreground mt-1">Profile Photo</span>
               </div>
 
               <div className="space-y-3">
