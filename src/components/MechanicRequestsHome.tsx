@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, MapPin, Check, X, MessageCircle, Phone, Navigation, Car, AlertTriangle, Ban, CheckCircle2 } from "lucide-react";
+import { Loader2, MapPin, Check, X, MessageCircle, Phone, Navigation, Car, AlertTriangle, Ban, CheckCircle2, MessageSquareQuote } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -227,38 +227,8 @@ export default function MechanicRequestsHome() {
 
   return (
     <div className="space-y-4">
-      <Card className="overflow-hidden border-border/60">
-        <div className="h-[320px] sm:h-[420px] w-full">
-          {pos ? (
-            <MapContainer center={center} zoom={13} scrollWheelZoom style={{ height: "100%", width: "100%" }} className="rounded-t-lg">
-              <TileLayer attribution="" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              <Marker position={pos} icon={mechIcon}><Popup>You</Popup></Marker>
-              {jobs
-                .filter((j) => j.latitude != null && j.longitude != null)
-                .map((j) => (
-                  <Marker key={j.issueId} position={[j.latitude!, j.longitude!]} icon={userIcon}>
-                    <Popup>
-                      <strong>{issueTypeLabel(j.issue_type)}</strong>
-                      <br />
-                      {j.userName || "Customer"} · {j.area}
-                    </Popup>
-                  </Marker>
-                ))}
-              <FitBounds points={allPoints} />
-            </MapContainer>
-          ) : (
-            <div className="h-full w-full flex items-center justify-center bg-muted">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            </div>
-          )}
-        </div>
-        <div className="p-3 bg-card text-xs text-muted-foreground">
-          {jobs.length === 0 ? "No active requests on map" : `${jobs.length} live request${jobs.length > 1 ? "s" : ""} · Tap a marker to view`}
-        </div>
-      </Card>
-
-      {/* ACCEPTED JOB(S) — pinned at top */}
-      {acceptedJobs.length > 0 && (
+      {acceptedJobs.length > 0 ? (
+        // When a job is accepted, promote live customer tracker to the main map.
         <div className="space-y-3">
           <h2 className="text-base font-semibold flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-success" /> Active Job
@@ -274,7 +244,39 @@ export default function MechanicRequestsHome() {
             />
           ))}
         </div>
+      ) : (
+        <Card className="overflow-hidden border-border/60">
+          <div className="h-[320px] sm:h-[420px] w-full">
+            {pos ? (
+              <MapContainer center={center} zoom={13} scrollWheelZoom style={{ height: "100%", width: "100%" }} className="rounded-t-lg">
+                <TileLayer attribution="" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                <Marker position={pos} icon={mechIcon}><Popup>You</Popup></Marker>
+                {jobs
+                  .filter((j) => j.latitude != null && j.longitude != null)
+                  .map((j) => (
+                    <Marker key={j.issueId} position={[j.latitude!, j.longitude!]} icon={userIcon}>
+                      <Popup>
+                        <strong>{issueTypeLabel(j.issue_type)}</strong>
+                        <br />
+                        {j.userName || "Customer"} · {j.area}
+                      </Popup>
+                    </Marker>
+                  ))}
+                <FitBounds points={allPoints} />
+              </MapContainer>
+            ) : (
+              <div className="h-full w-full flex items-center justify-center bg-muted">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            )}
+          </div>
+          <div className="p-3 bg-card text-xs text-muted-foreground">
+            {jobs.length === 0 ? "No active requests on map" : `${jobs.length} live request${jobs.length > 1 ? "s" : ""} · Tap a marker to view`}
+          </div>
+        </Card>
       )}
+
+
 
       {/* INCOMING REQUESTS */}
       <div className="space-y-3">
@@ -304,7 +306,15 @@ export default function MechanicRequestsHome() {
                 <Car className="h-3 w-3" /> {j.vehicleLabel}
               </p>
             )}
-            {j.description && <p className="text-sm text-foreground">{j.description}</p>}
+            {j.description && (
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <MessageSquareQuote className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-[10px] uppercase tracking-wide font-semibold text-primary">Customer's message</span>
+                </div>
+                <p className="text-sm text-foreground whitespace-pre-wrap leading-snug">{j.description}</p>
+              </div>
+            )}
 
             {j.latitude != null && j.longitude != null && (
               <RequestMiniMap userLat={j.latitude} userLng={j.longitude} height={140} />
@@ -363,7 +373,15 @@ function ActiveJobCard({
           <Car className="h-3 w-3" /> {job.vehicleLabel}
         </p>
       )}
-      {job.description && <p className="text-sm text-foreground bg-secondary/50 rounded-lg p-2">{job.description}</p>}
+      {job.description && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+          <div className="flex items-center gap-1.5 mb-1">
+            <MessageSquareQuote className="h-3.5 w-3.5 text-primary" />
+            <span className="text-[10px] uppercase tracking-wide font-semibold text-primary">Customer's message</span>
+          </div>
+          <p className="text-sm text-foreground whitespace-pre-wrap leading-snug">{job.description}</p>
+        </div>
+      )}
 
       {job.latitude != null && job.longitude != null && (
         <LiveCustomerTracker
