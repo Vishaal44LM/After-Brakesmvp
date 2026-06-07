@@ -76,7 +76,7 @@ const MechanicSetup = () => {
     if (!area) { toast.error("Area is required"); return; }
     if (!garageAddress.trim()) { toast.error("Garage Address is required"); return; }
     if (!coords) { toast.error("Garage Location is required — tap 'Use my current location'"); return; }
-    if (!garagePhoto) { toast.error("Profile Photo is required (clear photo of your face)"); return; }
+    if (!garagePhoto) { toast.error("Profile Photo is required"); return; }
     if (!idProofFile) { toast.error("Upload an ID proof"); return; }
     if (!yearsOfExperience) { toast.error("Enter years of experience"); return; }
     if (!user) { toast.error("Please login first"); return; }
