@@ -276,8 +276,8 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
     <div className="space-y-4 relative">
       <div className="px-1">
         <AddressSearch
-          initialQuery={address}
           near={userPos ? { lat: userPos[0], lng: userPos[1] } : { lat: CHENNAI_FALLBACK[0], lng: CHENNAI_FALLBACK[1] }}
+          placeholder="Enter your address"
           onSelect={(r) => {
             setUserPos([r.lat, r.lng]);
             setAddress(r.display_name);
@@ -285,6 +285,12 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
             persistLoc(r.lat, r.lng, r.display_name);
           }}
         />
+        {address && (
+          <p className="mt-1 px-1 text-[11px] text-muted-foreground line-clamp-1">
+            <MapPin className="inline h-3 w-3 mr-1 text-primary" />
+            Pinned: {address}
+          </p>
+        )}
       </div>
       <Card className="overflow-hidden border-border/60 relative">
         <div className="h-[320px] sm:h-[420px] w-full">
