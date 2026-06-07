@@ -147,9 +147,23 @@ const MechanicSetup = () => {
 
         <div className="bg-card rounded-xl p-6 border border-border space-y-4 animate-slide-up">
           <div className="flex flex-col items-center">
-            <FaceCapture onCaptured={handleFaceCaptured} previewUrl={garagePhotoPreview} />
+            <label className="cursor-pointer group">
+              <div className="relative h-28 w-28 rounded-full overflow-hidden bg-secondary border-2 border-dashed border-border flex items-center justify-center">
+                {garagePhotoPreview ? (
+                  <img src={garagePhotoPreview} alt="Profile" className="h-full w-full object-cover" />
+                ) : (
+                  <Camera className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
+                )}
+              </div>
+              <input
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                className="hidden"
+                onChange={handlePhotoUpload}
+              />
+            </label>
             <span className="text-xs text-muted-foreground mt-2 text-center">
-              Profile Photo — live face scan only <span className="text-destructive">*</span>
+              {garagePhotoPreview ? "Tap photo to change" : "Upload Profile Photo (JPG, PNG, WEBP)"} <span className="text-destructive">*</span>
             </span>
           </div>
 
