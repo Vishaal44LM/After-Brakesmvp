@@ -20,13 +20,14 @@ type Props = {
  * Address autocomplete + geocoding via Nominatim (OpenStreetMap).
  * No API key required. Debounced to be polite to the public endpoint.
  */
-export default function AddressSearch({ onSelect, initialQuery = "", placeholder = "Enter your exact address", near }: Props) {
+export default function AddressSearch({ onSelect, initialQuery = "", placeholder = "Enter your address", near }: Props) {
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<GeocodeResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const timerRef = useRef<number | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
+  const justSelectedRef = useRef(false);
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
