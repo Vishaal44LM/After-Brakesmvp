@@ -39,6 +39,7 @@ export default function AddressSearch({ onSelect, initialQuery = "", placeholder
 
   useEffect(() => {
     if (timerRef.current) window.clearTimeout(timerRef.current);
+    if (justSelectedRef.current) { justSelectedRef.current = false; return; }
     const q = query.trim();
     if (q.length < 3) { setResults([]); return; }
     timerRef.current = window.setTimeout(async () => {
