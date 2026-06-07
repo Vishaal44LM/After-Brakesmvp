@@ -227,35 +227,55 @@ export default function MechanicRequestsHome() {
 
   return (
     <div className="space-y-4">
-      <Card className="overflow-hidden border-border/60">
-        <div className="h-[320px] sm:h-[420px] w-full">
-          {pos ? (
-            <MapContainer center={center} zoom={13} scrollWheelZoom style={{ height: "100%", width: "100%" }} className="rounded-t-lg">
-              <TileLayer attribution="" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              <Marker position={pos} icon={mechIcon}><Popup>You</Popup></Marker>
-              {jobs
-                .filter((j) => j.latitude != null && j.longitude != null)
-                .map((j) => (
-                  <Marker key={j.issueId} position={[j.latitude!, j.longitude!]} icon={userIcon}>
-                    <Popup>
-                      <strong>{issueTypeLabel(j.issue_type)}</strong>
-                      <br />
-                      {j.userName || "Customer"} · {j.area}
-                    </Popup>
-                  </Marker>
-                ))}
-              <FitBounds points={allPoints} />
-            </MapContainer>
-          ) : (
-            <div className="h-full w-full flex items-center justify-center bg-muted">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            </div>
-          )}
+      {acceptedJobs.length > 0 ? (
+        // When a job is accepted, promote live customer tracker to the main map.
+        <div className="space-y-3">
+          <h2 className="text-base font-semibold flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-success" /> Active Job
+          </h2>
+          {acceptedJobs.map((j) => (
+            <ActiveJobCard
+              key={j.issueId}
+              job={j}
+              mechanicPos={pos}
+              onCancel={() => handleCancelAccepted(j)}
+              onChat={() => navigate(`/chat/${j.issueId}`)}
+              cancelling={acting === j.issueId}
+            />
+          ))}
         </div>
-        <div className="p-3 bg-card text-xs text-muted-foreground">
-          {jobs.length === 0 ? "No active requests on map" : `${jobs.length} live request${jobs.length > 1 ? "s" : ""} · Tap a marker to view`}
-        </div>
-      </Card>
+      ) : (
+        <Card className="overflow-hidden border-border/60">
+          <div className="h-[320px] sm:h-[420px] w-full">
+            {pos ? (
+              <MapContainer center={center} zoom={13} scrollWheelZoom style={{ height: "100%", width: "100%" }} className="rounded-t-lg">
+                <TileLayer attribution="" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                <Marker position={pos} icon={mechIcon}><Popup>You</Popup></Marker>
+                {jobs
+                  .filter((j) => j.latitude != null && j.longitude != null)
+                  .map((j) => (
+                    <Marker key={j.issueId} position={[j.latitude!, j.longitude!]} icon={userIcon}>
+                      <Popup>
+                        <strong>{issueTypeLabel(j.issue_type)}</strong>
+                        <br />
+                        {j.userName || "Customer"} · {j.area}
+                      </Popup>
+                    </Marker>
+                  ))}
+                <FitBounds points={allPoints} />
+              </MapContainer>
+            ) : (
+              <div className="h-full w-full flex items-center justify-center bg-muted">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            )}
+          </div>
+          <div className="p-3 bg-card text-xs text-muted-foreground">
+            {jobs.length === 0 ? "No active requests on map" : `${jobs.length} live request${jobs.length > 1 ? "s" : ""} · Tap a marker to view`}
+          </div>
+        </Card>
+      )}
+
 
       {/* ACCEPTED JOB(S) — pinned at top */}
       {acceptedJobs.length > 0 && (
