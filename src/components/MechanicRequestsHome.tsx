@@ -277,24 +277,6 @@ export default function MechanicRequestsHome() {
       )}
 
 
-      {/* ACCEPTED JOB(S) — pinned at top */}
-      {acceptedJobs.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-base font-semibold flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-success" /> Active Job
-          </h2>
-          {acceptedJobs.map((j) => (
-            <ActiveJobCard
-              key={j.issueId}
-              job={j}
-              mechanicPos={pos}
-              onCancel={() => handleCancelAccepted(j)}
-              onChat={() => navigate(`/chat/${j.issueId}`)}
-              cancelling={acting === j.issueId}
-            />
-          ))}
-        </div>
-      )}
 
       {/* INCOMING REQUESTS */}
       <div className="space-y-3">
