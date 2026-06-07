@@ -80,7 +80,9 @@ export default function AddressSearch({ onSelect, initialQuery = "", placeholder
   }, [query, near]);
 
   const choose = (r: GeocodeResult) => {
-    setQuery(r.display_name);
+    justSelectedRef.current = true;
+    setQuery("");
+    setResults([]);
     setOpen(false);
     onSelect(r);
   };
