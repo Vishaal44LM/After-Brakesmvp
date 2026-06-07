@@ -46,9 +46,17 @@ const MechanicSetup = () => {
     );
   };
 
-  const handleFaceCaptured = (file: File, previewUrl: string) => {
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!allowed.includes(file.type)) { toast.error("Use JPG, PNG, or WEBP"); return; }
+    if (file.size === 0) { toast.error("This file is empty"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5 MB"); return; }
     setGaragePhoto(file);
-    setGaragePhotoPreview(previewUrl);
+    const reader = new FileReader();
+    reader.onload = () => setGaragePhotoPreview(reader.result as string);
+    reader.readAsDataURL(file);
   };
 
   const handleIdProofUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
