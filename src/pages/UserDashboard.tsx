@@ -619,7 +619,30 @@ const UserDashboard = () => {
 
           {/* NEARBY = HOME (map + request flow + active jobs) */}
           <TabsContent value="nearby" className="space-y-4 mt-4">
-            <RequestMechanicHome vehicles={vehicles} onActiveIssue={() => fetchIssues()} />
+            {(() => {
+              // Promote the first accepted response onto the main map.
+              const accepted = responses.find((r: any) => r.status === "accepted");
+              const topMap = accepted ? (
+                <LiveMechanicTracker
+                  mechanicId={accepted.mechanic_id}
+                  mechanicName={accepted.mechanic?.name || accepted.mechanic?.garage_name}
+                  mechanicPhone={accepted.mechanic?.phone_number}
+                  mechanicPhotoUrl={accepted.mechanic?.garage_photo_url}
+                  garageName={accepted.mechanic?.garage_name}
+                  rating={accepted.mechanic?.rating}
+                  totalRatings={accepted.mechanic?.total_ratings}
+                  issueId={accepted.issue_id}
+                  onChat={() => navigate(`/chat/${accepted.issue_id}`)}
+                />
+              ) : undefined;
+              return (
+                <RequestMechanicHome
+                  vehicles={vehicles}
+                  onActiveIssue={() => fetchIssues()}
+                  topMapOverride={topMap}
+                />
+              );
+            })()}
 
             {/* My active requests / quotes */}
             <section className="space-y-3">
@@ -682,18 +705,7 @@ const UserDashboard = () => {
                   </div>
 
                   {r.status === "accepted" && (
-                    <div className="mt-3 pt-3 border-t border-border space-y-3">
-                      <LiveMechanicTracker
-                        mechanicId={r.mechanic_id}
-                        mechanicName={r.mechanic?.name || r.mechanic?.garage_name}
-                        mechanicPhone={r.mechanic?.phone_number}
-                        mechanicPhotoUrl={r.mechanic?.garage_photo_url}
-                        garageName={r.mechanic?.garage_name}
-                        rating={r.mechanic?.rating}
-                        totalRatings={r.mechanic?.total_ratings}
-                        issueId={r.issue_id}
-                        onChat={() => navigate(`/chat/${r.issue_id}`)}
-                      />
+                    <div className="mt-3 pt-3 border-t border-border">
                       <div className="flex items-center gap-1">
                         <span className="text-xs text-muted-foreground mr-1">Rate:</span>
                         {[1, 2, 3, 4, 5].map((star) => (
@@ -709,6 +721,7 @@ const UserDashboard = () => {
               })()}
             </section>
           </TabsContent>
+
 
           {/* DIGITAL GARAGE TAB */}
           <TabsContent value="garage" className="space-y-4 mt-4">
