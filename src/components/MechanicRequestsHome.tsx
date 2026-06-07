@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, MapPin, Check, X, MessageCircle, Phone, Navigation, Car, AlertTriangle, Ban, CheckCircle2 } from "lucide-react";
+import { Loader2, MapPin, Check, X, MessageCircle, Phone, Navigation, Car, AlertTriangle, Ban, CheckCircle2, MessageSquareQuote } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
