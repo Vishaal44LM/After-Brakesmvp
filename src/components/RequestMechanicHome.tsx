@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { useEffect, useMemo, useRef, useState, ReactNode } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,19 @@ const mechIcon = L.divIcon({
 
 const CHENNAI_FALLBACK: [number, number] = [13.0827, 80.2707];
 
+async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`,
+      { headers: { "Accept-Language": "en" } },
+    );
+    const json = await res.json();
+    return json?.display_name || null;
+  } catch {
+    return null;
+  }
+}
+
 function FitBounds({ points }: { points: [number, number][] }) {
   const map = useMap();
   useEffect(() => {
@@ -41,9 +54,20 @@ function FitBounds({ points }: { points: [number, number][] }) {
   return null;
 }
 
+function MapClickPicker({ onPick }: { onPick: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click(e) {
+      onPick(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  return null;
+}
+
 type Props = {
   vehicles: any[];
   onActiveIssue: (issueId: string | null) => void;
+  /** When provided, replaces the default top map (e.g. with a live-tracker once a mechanic accepts). */
+  topMapOverride?: ReactNode;
 };
 
 type SavedLoc = { lat: number; lng: number; address?: string };
@@ -69,7 +93,7 @@ function FlyTo({ pos }: { pos: [number, number] | null }) {
   return null;
 }
 
-export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) {
+export default function RequestMechanicHome({ vehicles, onActiveIssue, topMapOverride }: Props) {
   const { user, profile } = useAuth();
   const initial = loadSavedLoc();
   const [userPos, setUserPos] = useState<[number, number] | null>(
@@ -94,7 +118,18 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
     } catch {}
   };
 
-  // 1. Geolocation — handle every error code distinctly. Don't overwrite a manually-pinned address.
+  // Update both coords AND reverse-geocode the address whenever the user
+  // moves the pin (drag or click).
+  const updatePin = async (lat: number, lng: number) => {
+    setUserPos([lat, lng]);
+    persistLoc(lat, lng, address);
+    const name = await reverseGeocode(lat, lng);
+    if (name) {
+      setAddress(name);
+      persistLoc(lat, lng, name);
+    }
+  };
+
   useEffect(() => {
     if (initial) return;
     if (!navigator.geolocation) {
@@ -103,7 +138,14 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      (pos) => setUserPos([pos.coords.latitude, pos.coords.longitude]),
+      async (pos) => {
+        setUserPos([pos.coords.latitude, pos.coords.longitude]);
+        const name = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+        if (name) {
+          setAddress(name);
+          persistLoc(pos.coords.latitude, pos.coords.longitude, name);
+        }
+      },
       (err) => {
         const msg =
           err.code === err.PERMISSION_DENIED
@@ -118,7 +160,6 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
     );
-    // Listen for location events emitted by the permission gate.
     const onCoords = (e: any) => {
       if (!e?.detail) return;
       setUserPos([e.detail.lat, e.detail.lng]);
@@ -128,7 +169,6 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
     return () => window.removeEventListener("user-coords", onCoords);
   }, []);
 
-  // 2. Load available mechanics for map markers
   useEffect(() => {
     (async () => {
       setLoadingMechs(true);
@@ -141,9 +181,6 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
     })();
   }, []);
 
-  // 2b. Restore active outgoing request ONLY if it's recent and has no responses yet.
-  // Prevents old "open" issues (e.g. from Find Mechanics flow) from re-triggering
-  // the "Looking for mechanics" overlay on every visit to the Nearby tab.
   useEffect(() => {
     if (!user) return;
     (async () => {
@@ -168,7 +205,6 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
     })();
   }, [user]);
 
-  // 3. Watch for an accepted response on the active issue
   useEffect(() => {
     if (!activeIssueId || !user) return;
     let cancelled = false;
@@ -182,7 +218,6 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
       if (cancelled) return;
       if (data && data.length > 0) {
         const accepted = data[0];
-        // Auto-grant phone consent so the accepting mechanic can see our number
         await supabase
           .from("phone_share_consents")
           .insert({
@@ -228,6 +263,7 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
     if (!user) { toast.error("Please log in"); return; }
     if (!issueType) { toast.error("Select what's wrong"); return; }
     if (vehicles.length > 0 && !vehicleId) { toast.error("Please select your vehicle"); return; }
+    if (!description.trim()) { toast.error("Please add details about the problem"); return; }
     if (!userPos) { toast.error("Set your location — type your address or enable GPS"); return; }
 
     setRequesting(true);
@@ -239,7 +275,7 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
           description: [
             description,
             address ? `Address: ${address}` : null,
-          ].filter(Boolean).join("\n\n") || ISSUE_TYPES.find(t => t.value === issueType)?.label || "Service request",
+          ].filter(Boolean).join("\n\n"),
           issue_type: issueType,
           vehicle_id: vehicleId || null,
           area: profile?.area || null,
@@ -292,130 +328,135 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue }: Props) 
           </p>
         )}
       </div>
-      <Card className="overflow-hidden border-border/60 relative">
-        <div className="h-[320px] sm:h-[420px] w-full">
-          {userPos ? (
-            <MapContainer center={center} zoom={13} scrollWheelZoom style={{ height: "100%", width: "100%" }} className="rounded-t-lg">
-              <TileLayer attribution="" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              <Marker
-                position={userPos}
-                icon={userIcon}
-                draggable
-                eventHandlers={{
-                  dragend: (e) => {
-                    const ll = (e.target as L.Marker).getLatLng();
-                    setUserPos([ll.lat, ll.lng]);
-                    persistLoc(ll.lat, ll.lng, address);
-                  },
-                }}
-              >
-                <Popup>Drag to adjust — this is where the mechanic will come</Popup>
-              </Marker>
-              {mechanics
-                .filter((m) => m.latitude != null && m.longitude != null)
-                .map((m) => (
-                  <Marker key={m.user_id} position={[m.latitude, m.longitude]} icon={mechIcon}>
-                    <Popup>
-                      <strong>{m.garage_name}</strong>
-                      <br />
-                      {m.area}
-                    </Popup>
-                  </Marker>
-                ))}
-              <FlyTo pos={userPos} />
-              {!address && <FitBounds points={allPoints} />}
-            </MapContainer>
-          ) : (
-            <div className="h-full w-full flex items-center justify-center bg-muted">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            </div>
-          )}
-        </div>
 
-        <div className="p-4 space-y-3 bg-card">
-          {locError && (
-            <div className="flex items-start gap-2 text-xs text-warning rounded-md bg-warning/10 p-2">
-              <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-              <span>{locError}</span>
-            </div>
-          )}
-          {loadingMechs ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> Finding nearby mechanics…
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground flex items-center gap-1">
-              <MapPin className="h-3 w-3" /> {mechanics.length} mechanic{mechanics.length !== 1 ? "s" : ""} online nearby
-            </p>
-          )}
-
-          <Button className="w-full" size="lg" onClick={handleRequest} disabled={requesting || !!activeIssueId}>
-            {requesting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-            Request a Mechanic
-          </Button>
-
-          <div className="space-y-2 pt-1">
-            <label className="text-xs font-medium text-muted-foreground">What's the problem? <span className="text-destructive">*</span></label>
-            <select
-              value={issueType}
-              onChange={(e) => setIssueType(e.target.value)}
-              className={nativeSelectClass}
-            >
-              <option value="">Select issue type</option>
-              {ISSUE_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
-            {vehicles.length > 0 && (
-              <>
-                <label className="text-xs font-medium text-muted-foreground">Vehicle <span className="text-destructive">*</span></label>
-                <select
-                  value={vehicleId}
-                  onChange={(e) => setVehicleId(e.target.value)}
-                  className={nativeSelectClass}
+      {topMapOverride ? (
+        <>{topMapOverride}</>
+      ) : (
+        <Card className="overflow-hidden border-border/60 relative">
+          <div className="h-[320px] sm:h-[420px] w-full">
+            {userPos ? (
+              <MapContainer center={center} zoom={13} scrollWheelZoom style={{ height: "100%", width: "100%" }} className="rounded-t-lg">
+                <TileLayer attribution="" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                <MapClickPicker onPick={updatePin} />
+                <Marker
+                  position={userPos}
+                  icon={userIcon}
+                  draggable
+                  eventHandlers={{
+                    dragend: (e) => {
+                      const ll = (e.target as L.Marker).getLatLng();
+                      updatePin(ll.lat, ll.lng);
+                    },
+                  }}
                 >
-                  <option value="">Select your vehicle</option>
-                  {vehicles.map((v: any) => (
-                    <option key={v.id} value={v.id}>
-                      {v.vehicle_type} {v.vehicle_brand} {v.vehicle_model}
-                    </option>
+                  <Popup>Drag or tap the map to adjust — this is where the mechanic will come</Popup>
+                </Marker>
+                {mechanics
+                  .filter((m) => m.latitude != null && m.longitude != null)
+                  .map((m) => (
+                    <Marker key={m.user_id} position={[m.latitude, m.longitude]} icon={mechIcon}>
+                      <Popup>
+                        <strong>{m.garage_name}</strong>
+                        <br />
+                        {m.area}
+                      </Popup>
+                    </Marker>
                   ))}
-                </select>
-              </>
+                <FlyTo pos={userPos} />
+                {!address && <FitBounds points={allPoints} />}
+              </MapContainer>
+            ) : (
+              <div className="h-full w-full flex items-center justify-center bg-muted">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
             )}
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Add details (optional)"
-              className="bg-secondary border-0 min-h-[60px]"
-            />
           </div>
-        </div>
 
-        {/* Looking for mechanics — compact overlay anchored to bottom of MAP, keeps map visible */}
-        {activeIssueId && (
-          <div className="absolute left-3 right-3 bottom-3 sm:left-4 sm:right-4 sm:bottom-4 z-[1000] animate-fade-in pointer-events-none">
-            <Card className="pointer-events-auto bg-background/95 backdrop-blur-md border-primary/50 shadow-xl p-3 sm:p-4 flex items-center gap-3">
-              <div className="relative h-12 w-12 shrink-0">
-                <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Search className="h-6 w-6 text-primary animate-pulse" />
-                </div>
+          <div className="p-4 space-y-3 bg-card">
+            {locError && (
+              <div className="flex items-start gap-2 text-xs text-warning rounded-md bg-warning/10 p-2">
+                <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <span>{locError}</span>
               </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-semibold leading-tight">Looking for mechanics…</h3>
-                <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">
-                  Nearby mechanics have been notified. First to accept is yours.
-                </p>
+            )}
+            {loadingMechs ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Finding nearby mechanics…
               </div>
-              <Button size="sm" variant="outline" onClick={cancelRequest} className="shrink-0">
-                <X className="h-3 w-3 sm:mr-1" />
-                <span className="hidden sm:inline">Cancel</span>
-              </Button>
-            </Card>
+            ) : (
+              <p className="text-sm text-muted-foreground flex items-center gap-1">
+                <MapPin className="h-3 w-3" /> {mechanics.length} mechanic{mechanics.length !== 1 ? "s" : ""} online nearby
+              </p>
+            )}
+
+            <Button className="w-full" size="lg" onClick={handleRequest} disabled={requesting || !!activeIssueId}>
+              {requesting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+              Request a Mechanic
+            </Button>
+
+            <div className="space-y-2 pt-1">
+              <label className="text-xs font-medium text-muted-foreground">What's the problem?</label>
+              <select
+                value={issueType}
+                onChange={(e) => setIssueType(e.target.value)}
+                className={nativeSelectClass}
+              >
+                <option value="">Select issue type</option>
+                {ISSUE_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+              {vehicles.length > 0 && (
+                <>
+                  <label className="text-xs font-medium text-muted-foreground">Vehicle</label>
+                  <select
+                    value={vehicleId}
+                    onChange={(e) => setVehicleId(e.target.value)}
+                    className={nativeSelectClass}
+                  >
+                    <option value="">Select your vehicle</option>
+                    {vehicles.map((v: any) => (
+                      <option key={v.id} value={v.id}>
+                        {v.vehicle_type} {v.vehicle_brand} {v.vehicle_model}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
+              <label className="text-xs font-medium text-muted-foreground">Add details</label>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe what's happening — sounds, when it started, anything you've tried…"
+                className="bg-secondary border-0 min-h-[60px]"
+              />
+            </div>
           </div>
-        )}
-      </Card>
+
+          {activeIssueId && (
+            <div className="absolute left-3 right-3 bottom-3 sm:left-4 sm:right-4 sm:bottom-4 z-[1000] animate-fade-in pointer-events-none">
+              <Card className="pointer-events-auto bg-background/95 backdrop-blur-md border-primary/50 shadow-xl p-3 sm:p-4 flex items-center gap-3">
+                <div className="relative h-12 w-12 shrink-0">
+                  <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Search className="h-6 w-6 text-primary animate-pulse" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-semibold leading-tight">Looking for mechanics…</h3>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">
+                    Nearby mechanics have been notified. First to accept is yours.
+                  </p>
+                </div>
+                <Button size="sm" variant="outline" onClick={cancelRequest} className="shrink-0">
+                  <X className="h-3 w-3 sm:mr-1" />
+                  <span className="hidden sm:inline">Cancel</span>
+                </Button>
+              </Card>
+            </div>
+          )}
+        </Card>
+      )}
     </div>
   );
 }
