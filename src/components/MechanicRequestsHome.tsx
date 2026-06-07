@@ -373,7 +373,15 @@ function ActiveJobCard({
           <Car className="h-3 w-3" /> {job.vehicleLabel}
         </p>
       )}
-      {job.description && <p className="text-sm text-foreground bg-secondary/50 rounded-lg p-2">{job.description}</p>}
+      {job.description && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+          <div className="flex items-center gap-1.5 mb-1">
+            <MessageSquareQuote className="h-3.5 w-3.5 text-primary" />
+            <span className="text-[10px] uppercase tracking-wide font-semibold text-primary">Customer's message</span>
+          </div>
+          <p className="text-sm text-foreground whitespace-pre-wrap leading-snug">{job.description}</p>
+        </div>
+      )}
 
       {job.latitude != null && job.longitude != null && (
         <LiveCustomerTracker
