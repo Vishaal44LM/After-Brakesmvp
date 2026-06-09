@@ -14,7 +14,7 @@ import {
 import AIMechanicCharacter from "@/components/AIMechanicCharacter";
 import RequestMechanicHome from "@/components/RequestMechanicHome";
 import LiveMechanicTracker from "@/components/LiveMechanicTracker";
-import LocationPermissionGate from "@/components/LocationPermissionGate";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import { issueTypeLabel } from "@/data/issueTypes";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -607,7 +607,7 @@ const UserDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background pb-36">
-      <LocationPermissionGate />
+      <PWAInstallPrompt />
       <Navbar role="user" onLogout={handleLogout} />
       <div className="container max-w-2xl py-4 px-4">
         <Tabs defaultValue="nearby" className="w-full">
