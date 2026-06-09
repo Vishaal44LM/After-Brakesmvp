@@ -54,10 +54,20 @@ function FitBounds({ points }: { points: [number, number][] }) {
   return null;
 }
 
-function MapClickPicker({ onPick }: { onPick: (lat: number, lng: number) => void }) {
-  useMapEvents({
-    click(e) {
-      onPick(e.latlng.lat, e.latlng.lng);
+/**
+ * Tracks the map center continuously so the location beneath the
+ * fixed center pin always reflects the current map position.
+ * Uber/Rapido pattern: the pin is stationary; the map moves under it.
+ */
+function CenterPinTracker({ onMove }: { onMove: (lat: number, lng: number) => void }) {
+  const map = useMapEvents({
+    move() {
+      const c = map.getCenter();
+      onMove(c.lat, c.lng);
+    },
+    moveend() {
+      const c = map.getCenter();
+      onMove(c.lat, c.lng);
     },
   });
   return null;
@@ -96,7 +106,12 @@ function FlyTo({ pos }: { pos: [number, number] | null }) {
 export default function RequestMechanicHome({ vehicles, onActiveIssue, topMapOverride }: Props) {
   const { user, profile } = useAuth();
   const initial = loadSavedLoc();
-  const [userPos, setUserPos] = useState<[number, number] | null>(
+  // gpsPos = the user's TRUE live location (blue dot, immovable).
+  const [gpsPos, setGpsPos] = useState<[number, number] | null>(
+    initial ? [initial.lat, initial.lng] : null,
+  );
+  // pickedPos = the coordinate under the fixed center pin (what we'll send).
+  const [pickedPos, setPickedPos] = useState<[number, number] | null>(
     initial ? [initial.lat, initial.lng] : null,
   );
   const [address, setAddress] = useState<string>(initial?.address || "");
@@ -111,6 +126,8 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue, topMapOve
 
   const [activeIssueId, setActiveIssueId] = useState<string | null>(null);
   const pollRef = useRef<number | null>(null);
+  const geocodeTimerRef = useRef<number | null>(null);
+  const [flyTarget, setFlyTarget] = useState<[number, number] | null>(null);
 
   const persistLoc = (lat: number, lng: number, addr?: string) => {
     try {
@@ -118,35 +135,49 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue, topMapOve
     } catch {}
   };
 
-  // Update both coords AND reverse-geocode the address whenever the user
-  // moves the pin (drag or click).
-  const updatePin = async (lat: number, lng: number) => {
-    setUserPos([lat, lng]);
-    persistLoc(lat, lng, address);
-    const name = await reverseGeocode(lat, lng);
-    if (name) {
-      setAddress(name);
-      persistLoc(lat, lng, name);
-    }
+  // Called continuously as the map moves. Updates the picked coordinate
+  // immediately; reverse-geocodes the address with a debounce so we don't
+  // hammer Nominatim while the user is panning.
+  const handleCenterMove = (lat: number, lng: number) => {
+    setPickedPos([lat, lng]);
+    if (geocodeTimerRef.current) window.clearTimeout(geocodeTimerRef.current);
+    geocodeTimerRef.current = window.setTimeout(async () => {
+      const name = await reverseGeocode(lat, lng);
+      if (name) {
+        setAddress(name);
+        persistLoc(lat, lng, name);
+      } else {
+        persistLoc(lat, lng, address);
+      }
+    }, 500);
   };
 
   useEffect(() => {
-    if (initial) return;
     if (!navigator.geolocation) {
-      setLocError("Geolocation not supported in this browser. Search your address above.");
-      setUserPos(CHENNAI_FALLBACK);
+      if (!initial) {
+        setLocError("Geolocation not supported in this browser. Search your address above.");
+        setGpsPos(CHENNAI_FALLBACK);
+        setPickedPos(CHENNAI_FALLBACK);
+      }
       return;
     }
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        setUserPos([pos.coords.latitude, pos.coords.longitude]);
-        const name = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
-        if (name) {
-          setAddress(name);
-          persistLoc(pos.coords.latitude, pos.coords.longitude, name);
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setGpsPos([lat, lng]);
+        if (!initial) {
+          setPickedPos([lat, lng]);
+          setFlyTarget([lat, lng]);
+          const name = await reverseGeocode(lat, lng);
+          if (name) {
+            setAddress(name);
+            persistLoc(lat, lng, name);
+          }
         }
       },
       (err) => {
+        if (initial) return;
         const msg =
           err.code === err.PERMISSION_DENIED
             ? "Location permission denied. Type your address above or update browser settings."
@@ -156,13 +187,14 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue, topMapOve
             ? "Location request timed out. Type your address above."
             : "Couldn't get your location. Type your address above.";
         setLocError(msg);
-        setUserPos(CHENNAI_FALLBACK);
+        setGpsPos(CHENNAI_FALLBACK);
+        setPickedPos(CHENNAI_FALLBACK);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
     );
     const onCoords = (e: any) => {
       if (!e?.detail) return;
-      setUserPos([e.detail.lat, e.detail.lng]);
+      setGpsPos([e.detail.lat, e.detail.lng]);
       setLocError(null);
     };
     window.addEventListener("user-coords", onCoords);
