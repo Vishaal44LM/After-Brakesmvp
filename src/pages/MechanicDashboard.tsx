@@ -18,7 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { chennaiAreas } from "@/data/chennaiAreas";
 import { useBroadcastMechanicLocation } from "@/hooks/useBroadcastMechanicLocation";
 import MechanicRequestsHome from "@/components/MechanicRequestsHome";
-import LocationPermissionGate from "@/components/LocationPermissionGate";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 
 const MechanicDashboard = () => {
   const navigate = useNavigate();
@@ -154,7 +154,7 @@ const MechanicDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <LocationPermissionGate />
+      <PWAInstallPrompt />
       <Navbar role="mechanic" onLogout={handleLogout} />
       <div className="container max-w-2xl py-4 px-4">
         <Tabs defaultValue="issues" className="w-full">
