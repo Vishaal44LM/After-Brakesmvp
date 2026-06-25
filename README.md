@@ -1,1 +1,1 @@
-AI-powered vehicle service marketplace 
+AI-powered mechanic-hailing platform
