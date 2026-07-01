@@ -228,6 +228,8 @@ const MechanicDashboard = () => {
                 </Button>
               </div>
             </section>
+
+            <ContactUsSection />
           </TabsContent>
         </Tabs>
       </div>
