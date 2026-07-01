@@ -157,6 +157,8 @@ const MechanicDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <InAppBrowserGate />
+      <LocationPermissionGate />
       <PWAInstallPrompt />
       <Navbar role="mechanic" onLogout={handleLogout} />
       <div className="container max-w-2xl py-4 px-4">
