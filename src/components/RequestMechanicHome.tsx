@@ -464,7 +464,7 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue, topMapOve
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe what's happening — sounds, when it started, anything you've tried…"
+                placeholder="Describe what's happening"
                 className="bg-secondary border-0 min-h-[60px]"
               />
             </div>

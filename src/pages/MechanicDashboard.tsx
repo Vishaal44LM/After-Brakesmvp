@@ -19,6 +19,9 @@ import { chennaiAreas } from "@/data/chennaiAreas";
 import { useBroadcastMechanicLocation } from "@/hooks/useBroadcastMechanicLocation";
 import MechanicRequestsHome from "@/components/MechanicRequestsHome";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
+import LocationPermissionGate from "@/components/LocationPermissionGate";
+import InAppBrowserGate from "@/components/InAppBrowserGate";
+import ContactUsSection from "@/components/ContactUsSection";
 
 const MechanicDashboard = () => {
   const navigate = useNavigate();
@@ -154,6 +157,8 @@ const MechanicDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <InAppBrowserGate />
+      <LocationPermissionGate />
       <PWAInstallPrompt />
       <Navbar role="mechanic" onLogout={handleLogout} />
       <div className="container max-w-2xl py-4 px-4">
@@ -223,6 +228,8 @@ const MechanicDashboard = () => {
                 </Button>
               </div>
             </section>
+
+            <ContactUsSection />
           </TabsContent>
         </Tabs>
       </div>
