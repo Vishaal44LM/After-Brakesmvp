@@ -109,3 +109,16 @@
 
 /* Hide Leaflet attribution and OpenStreetMap label */
 .leaflet-control-attribution { display: none !important; }
+
+/*
+ * Contain Leaflet's internal z-index stack (panes 400-700, controls/popup 1000)
+ * within a new stacking context so it never covers app modals, permission
+ * gates, toasts, or the PWA install dialog. All popups portalled to <body>
+ * render above the map without any z-index gymnastics.
+ */
+.leaflet-container {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+}
+
