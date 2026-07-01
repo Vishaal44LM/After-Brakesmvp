@@ -789,7 +789,10 @@ const UserDashboard = () => {
                 </Button>
               </div>
             </section>
+
+            <ContactUsSection />
           </TabsContent>
+
         </Tabs>
       </div>
       <AIMechanicCharacter profile={profile} vehicles={vehicles} />
