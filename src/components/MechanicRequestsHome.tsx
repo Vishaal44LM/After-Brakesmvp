@@ -211,7 +211,6 @@ export default function MechanicRequestsHome() {
 
   const handleCancelAccepted = async (j: Job) => {
     if (!user || !j.responseId) return;
-    if (!confirm("Cancel this job? The customer will be notified and the request will be re-opened for other mechanics.")) return;
     setActing(j.issueId);
     try {
       await supabase.from("mechanic_responses").update({ status: "cancelled" } as any).eq("id", j.responseId);
@@ -221,7 +220,7 @@ export default function MechanicRequestsHome() {
       fetchJobs();
     } catch (e: any) {
       toast.error(e.message);
-    } finally { setActing(null); }
+    } finally { setActing(null); setConfirmCancel(null); }
   };
 
   const allPoints: [number, number][] = useMemo(() => {
