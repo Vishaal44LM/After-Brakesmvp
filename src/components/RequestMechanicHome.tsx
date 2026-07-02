@@ -4,6 +4,10 @@ import L from "leaflet";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Loader2, MapPin, Send, AlertTriangle, Search, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -128,6 +132,7 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue, topMapOve
   const pollRef = useRef<number | null>(null);
   const geocodeTimerRef = useRef<number | null>(null);
   const [flyTarget, setFlyTarget] = useState<[number, number] | null>(null);
+  const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
 
   const persistLoc = (lat: number, lng: number, addr?: string) => {
     try {
@@ -392,8 +397,9 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue, topMapOve
                     ))}
                   <FlyTo pos={flyTarget} />
                 </MapContainer>
-                {/* Fixed center pin overlay — Uber/Rapido style. Map moves beneath it. */}
-                <div className="pointer-events-none absolute inset-0 z-[500] flex items-center justify-center">
+                {/* Fixed center pin overlay — Uber/Rapido style. Map moves beneath it.
+                    Hidden automatically when any modal is open via body[data-scroll-locked]. */}
+                <div className="map-center-pin pointer-events-none absolute inset-0 z-[400] flex items-center justify-center">
                   <div className="relative -translate-y-3 flex flex-col items-center">
                     <div className="h-10 w-10 rounded-full rounded-bl-none bg-primary border-[3px] border-white shadow-lg flex items-center justify-center -rotate-45">
                       <MapPin className="h-5 w-5 text-white rotate-45" />
@@ -485,7 +491,7 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue, topMapOve
                     Nearby mechanics have been notified. First to accept is yours.
                   </p>
                 </div>
-                <Button size="sm" variant="outline" onClick={cancelRequest} className="shrink-0">
+                <Button size="sm" variant="outline" onClick={() => setConfirmCancelOpen(true)} className="shrink-0">
                   <X className="h-3 w-3 sm:mr-1" />
                   <span className="hidden sm:inline">Cancel</span>
                 </Button>
@@ -494,6 +500,26 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue, topMapOve
           )}
         </Card>
       )}
+
+      <AlertDialog open={confirmCancelOpen} onOpenChange={setConfirmCancelOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel your request?</AlertDialogTitle>
+            <AlertDialogDescription>
+              We'll stop looking for a mechanic. You can send a new request anytime.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep Request</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => { setConfirmCancelOpen(false); cancelRequest(); }}
+            >
+              Cancel Request
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

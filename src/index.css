@@ -122,3 +122,16 @@
   isolation: isolate;
 }
 
+/*
+ * Hide the fixed center map pin while any Radix dialog / alert-dialog /
+ * sonner toast / permission gate is open, so the pin never floats above
+ * onboarding or confirmation popups. Radix locks scroll on <body> when a
+ * modal opens, exposing data-scroll-locked — we use it as the signal.
+ */
+body[data-scroll-locked] .map-center-pin { display: none !important; }
+
+/* Prevent accidental pinch-zoom of the whole app (map still zooms) */
+html, body { touch-action: manipulation; overscroll-behavior: none; }
+.leaflet-container { touch-action: none; }
+
+
