@@ -392,8 +392,9 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue, topMapOve
                     ))}
                   <FlyTo pos={flyTarget} />
                 </MapContainer>
-                {/* Fixed center pin overlay — Uber/Rapido style. Map moves beneath it. */}
-                <div className="pointer-events-none absolute inset-0 z-[500] flex items-center justify-center">
+                {/* Fixed center pin overlay — Uber/Rapido style. Map moves beneath it.
+                    Hidden automatically when any modal is open via body[data-scroll-locked]. */}
+                <div className="map-center-pin pointer-events-none absolute inset-0 z-[400] flex items-center justify-center">
                   <div className="relative -translate-y-3 flex flex-col items-center">
                     <div className="h-10 w-10 rounded-full rounded-bl-none bg-primary border-[3px] border-white shadow-lg flex items-center justify-center -rotate-45">
                       <MapPin className="h-5 w-5 text-white rotate-45" />
