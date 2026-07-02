@@ -491,7 +491,7 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue, topMapOve
                     Nearby mechanics have been notified. First to accept is yours.
                   </p>
                 </div>
-                <Button size="sm" variant="outline" onClick={cancelRequest} className="shrink-0">
+                <Button size="sm" variant="outline" onClick={() => setConfirmCancelOpen(true)} className="shrink-0">
                   <X className="h-3 w-3 sm:mr-1" />
                   <span className="hidden sm:inline">Cancel</span>
                 </Button>
@@ -500,6 +500,26 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue, topMapOve
           )}
         </Card>
       )}
+
+      <AlertDialog open={confirmCancelOpen} onOpenChange={setConfirmCancelOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel your request?</AlertDialogTitle>
+            <AlertDialogDescription>
+              We'll stop looking for a mechanic. You can send a new request anytime.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep Request</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => { setConfirmCancelOpen(false); cancelRequest(); }}
+            >
+              Cancel Request
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
