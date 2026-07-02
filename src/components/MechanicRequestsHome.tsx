@@ -233,7 +233,26 @@ export default function MechanicRequestsHome() {
 
   const center = pos || CHENNAI_FALLBACK;
   const acceptedJobs = jobs.filter((j) => j.status === "accepted");
-  const openJobs = jobs.filter((j) => j.status === "open");
+
+  // Compute distance and apply Rapido-style radius expansion for open jobs.
+  const openJobs = useMemo(() => {
+    const withDist = jobs
+      .filter((j) => j.status === "open")
+      .map((j) => {
+        const d = (pos && j.latitude != null && j.longitude != null)
+          ? distanceMeters(pos, [j.latitude, j.longitude])
+          : null;
+        // Radius: 5km base + 5km per 30s since request creation, capped 20km
+        const ageMs = now - new Date(j.created_at).getTime();
+        const radiusKm = Math.min(20, 5 + Math.floor(ageMs / 30000) * 5);
+        return { j, d, radiusKm };
+      })
+      // Show if within active radius, OR distance unknown (allow it through).
+      .filter(({ d, radiusKm }) => d == null || d <= radiusKm * 1000)
+      // Closest first
+      .sort((a, b) => (a.d ?? 1e12) - (b.d ?? 1e12));
+    return withDist;
+  }, [jobs, pos, now]);
 
   return (
     <div className="space-y-4">
@@ -248,7 +267,7 @@ export default function MechanicRequestsHome() {
               key={j.issueId}
               job={j}
               mechanicPos={pos}
-              onCancel={() => handleCancelAccepted(j)}
+              onCancel={() => setConfirmCancel(j)}
               onChat={() => navigate(`/chat/${j.issueId}`)}
               cancelling={acting === j.issueId}
             />
@@ -261,9 +280,9 @@ export default function MechanicRequestsHome() {
               <MapContainer center={center} zoom={13} scrollWheelZoom style={{ height: "100%", width: "100%" }} className="rounded-t-lg">
                 <TileLayer attribution="" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                 <Marker position={pos} icon={mechIcon}><Popup>You</Popup></Marker>
-                {jobs
-                  .filter((j) => j.latitude != null && j.longitude != null)
-                  .map((j) => (
+                {openJobs
+                  .filter(({ j }) => j.latitude != null && j.longitude != null)
+                  .map(({ j }) => (
                     <Marker key={j.issueId} position={[j.latitude!, j.longitude!]} icon={userIcon}>
                       <Popup>
                         <strong>{issueTypeLabel(j.issue_type)}</strong>
@@ -272,7 +291,7 @@ export default function MechanicRequestsHome() {
                       </Popup>
                     </Marker>
                   ))}
-                <FitBounds points={allPoints} />
+                <FitBounds points={[pos, ...openJobs.filter(({ j }) => j.latitude != null && j.longitude != null).map(({ j }) => [j.latitude!, j.longitude!] as [number, number])]} />
               </MapContainer>
             ) : (
               <div className="h-full w-full flex items-center justify-center bg-muted">
@@ -281,7 +300,7 @@ export default function MechanicRequestsHome() {
             )}
           </div>
           <div className="p-3 bg-card text-xs text-muted-foreground">
-            {jobs.length === 0 ? "No active requests on map" : `${jobs.length} live request${jobs.length > 1 ? "s" : ""} · Tap a marker to view`}
+            {openJobs.length === 0 ? "No nearby requests right now" : `${openJobs.length} nearby request${openJobs.length > 1 ? "s" : ""} · Closest first`}
           </div>
         </Card>
       )}
@@ -296,10 +315,13 @@ export default function MechanicRequestsHome() {
         {loading && <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>}
         {!loading && openJobs.length === 0 && (
           <div className="text-center text-muted-foreground text-sm py-8">
-            No requests yet. You'll see them here when customers nearby ask for help.
+            No requests nearby yet. Requests appear when a customer within range asks for help.
           </div>
         )}
-        {openJobs.map((j) => (
+        {openJobs.map(({ j, d }) => {
+          const km = d != null ? d / 1000 : null;
+          const etaMin = km != null ? Math.max(1, Math.round((km / 25) * 60)) : null; // ~25 km/h city avg
+          return (
           <div key={j.issueId} className="bg-card rounded-xl border border-border p-4 animate-slide-up space-y-3">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
@@ -308,6 +330,12 @@ export default function MechanicRequestsHome() {
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <MapPin className="h-3 w-3" /> {j.area || "Unknown area"}
                 </p>
+                {km != null && (
+                  <p className="text-xs text-primary flex items-center gap-2 mt-0.5">
+                    <span className="flex items-center gap-1"><Navigation className="h-3 w-3" /> {km.toFixed(1)} km away</span>
+                    {etaMin != null && <span className="text-muted-foreground">· {etaMin} min</span>}
+                  </p>
+                )}
               </div>
               <span className="text-[10px] px-2 py-0.5 rounded shrink-0 bg-primary/20 text-primary">new</span>
             </div>
@@ -339,8 +367,29 @@ export default function MechanicRequestsHome() {
               </Button>
             </div>
           </div>
-        ))}
+        );})}
       </div>
+
+      <AlertDialog open={!!confirmCancel} onOpenChange={(o) => !o && setConfirmCancel(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel this job?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The customer will be notified and the request will be re-opened for other mechanics.
+              You won't be able to undo this.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep Job</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => confirmCancel && handleCancelAccepted(confirmCancel)}
+            >
+              Cancel Job
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
