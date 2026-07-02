@@ -132,6 +132,7 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue, topMapOve
   const pollRef = useRef<number | null>(null);
   const geocodeTimerRef = useRef<number | null>(null);
   const [flyTarget, setFlyTarget] = useState<[number, number] | null>(null);
+  const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
 
   const persistLoc = (lat: number, lng: number, addr?: string) => {
     try {
