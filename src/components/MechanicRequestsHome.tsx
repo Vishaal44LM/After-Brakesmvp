@@ -64,6 +64,13 @@ export default function MechanicRequestsHome() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<string | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState<Job | null>(null);
+  // Radius expansion: start 5km → +5km every 30s up to 20km (per Rapido/Uber dispatch).
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(Date.now()), 5000);
+    return () => window.clearInterval(t);
+  }, []);
 
   useEffect(() => {
     if (!navigator.geolocation) { setPos(CHENNAI_FALLBACK); return; }
