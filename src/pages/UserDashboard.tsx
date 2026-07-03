@@ -11,7 +11,7 @@ import {
   Loader2, Send, Bot, User, Check, Phone, Car, Edit2, Plus, Trash2, Save, Search, Wrench, Mic, MicOff, Volume2,
   FolderOpen, FileText, Shield, Leaf, CalendarDays, Ban
 } from "lucide-react";
-import AIVisionAssistant from "@/components/AIVisionAssistant";
+import AIMechanicCharacter from "@/components/AIMechanicCharacter";
 import RequestMechanicHome from "@/components/RequestMechanicHome";
 import LiveMechanicTracker from "@/components/LiveMechanicTracker";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
@@ -617,9 +617,8 @@ const UserDashboard = () => {
       <div className="container max-w-2xl py-4 px-4">
 
         <Tabs defaultValue="nearby" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-secondary">
+          <TabsList className="grid w-full grid-cols-3 bg-secondary">
             <TabsTrigger value="nearby" className="text-xs gap-1.5"><MapPin className="h-3.5 w-3.5" /> Nearby</TabsTrigger>
-            <TabsTrigger value="ai" className="text-xs gap-1.5"><Sparkles className="h-3.5 w-3.5" /> AI Vision</TabsTrigger>
             <TabsTrigger value="garage" className="text-xs gap-1.5"><FolderOpen className="h-3.5 w-3.5" /> Glove Box</TabsTrigger>
             <TabsTrigger value="profile" className="text-xs gap-1.5"><User className="h-3.5 w-3.5" /> Profile</TabsTrigger>
           </TabsList>
@@ -730,11 +729,6 @@ const UserDashboard = () => {
           </TabsContent>
 
 
-          {/* AI VEHICLE VISION TAB */}
-          <TabsContent value="ai" className="space-y-4 mt-4">
-            <AIVisionAssistant />
-          </TabsContent>
-
           {/* DIGITAL GARAGE TAB */}
           <TabsContent value="garage" className="space-y-4 mt-4">
             {user && <DigitalGarage user={user} vehicles={vehicles} />}
@@ -801,6 +795,7 @@ const UserDashboard = () => {
 
         </Tabs>
       </div>
+      <AIMechanicCharacter profile={profile} vehicles={vehicles} />
     </div>
   );
 };
