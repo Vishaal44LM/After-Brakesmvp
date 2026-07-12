@@ -31,7 +31,7 @@ const RoleSelect = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
-      <img src={logo} alt="After Brakes" className="h-16 w-16 mb-4 animate-fade-in" />
+      <img src={logo} alt="After Brakes" className="h-24 w-24 md:h-28 md:w-28 mb-4 object-contain animate-fade-in" />
       <h1 className="font-brand text-2xl md:text-3xl font-bold text-foreground mb-2 text-center">
         How do you want to use After Brakes?
       </h1>
