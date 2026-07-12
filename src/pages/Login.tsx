@@ -91,7 +91,7 @@ const Login = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm flex flex-col items-center">
-        <img src={logo} alt="After Brakes" className="h-16 w-16 mb-4 animate-fade-in" />
+        <img src={logo} alt="After Brakes" className="h-24 w-24 mb-4 object-contain animate-fade-in" />
         <h1 className="font-brand text-3xl font-bold text-foreground mb-1">After Brakes</h1>
         <div className="h-1 w-16 bg-primary rounded-full mb-2 animate-pulse-glow" />
         <p className="text-muted-foreground text-sm mb-8">Mechanics in Minutes.</p>
