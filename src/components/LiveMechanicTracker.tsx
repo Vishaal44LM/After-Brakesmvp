@@ -14,7 +14,7 @@ const userIcon = L.divIcon({
 });
 const mechIcon = L.divIcon({
   className: "",
-  html: `<div style="width:36px;height:36px;border-radius:50%;background:hsl(263 56% 50%);border:3px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.4);">
+  html: `<div style="width:36px;height:36px;border-radius:50%;background:hsl(1 93% 51%);border:3px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.4);">
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
   </div>`,
   iconSize: [36, 36], iconAnchor: [18, 18],
@@ -199,7 +199,7 @@ export default function LiveMechanicTracker({
                 </AnimatedMarker>
               )}
               {eta?.route?.length ? (
-                <Polyline positions={eta.route} pathOptions={{ color: "hsl(263 56% 55%)", weight: 5, opacity: 0.85 }} />
+                <Polyline positions={eta.route} pathOptions={{ color: "hsl(1 93% 55%)", weight: 5, opacity: 0.85 }} />
               ) : null}
               <FitBounds points={points} />
             </MapContainer>
