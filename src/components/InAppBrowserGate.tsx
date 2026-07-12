@@ -90,7 +90,7 @@ export default function InAppBrowserGate() {
 
           {/* HERO — Instagram ➜ Browser ➜ After Brakes */}
           <div className="flex items-center justify-center gap-3 mb-5">
-            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center shadow-lg">
+            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-black flex items-center justify-center shadow-lg">
               <Instagram className="h-7 w-7 text-white" />
             </div>
             <ArrowRight className="h-4 w-4 text-muted-foreground animate-pulse" />
