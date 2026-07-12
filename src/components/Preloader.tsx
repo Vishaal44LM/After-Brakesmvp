@@ -27,13 +27,11 @@ const Preloader = ({ onComplete }: { onComplete: () => void }) => {
       }`}
       style={{ backgroundColor: "#F60F0C" }}
     >
-      <div className="mb-6 h-32 w-32 md:h-40 md:w-40 rounded-3xl bg-white flex items-center justify-center shadow-2xl animate-fade-in">
-        <img
-          src={logo}
-          alt="After Brakes"
-          className="h-24 w-24 md:h-32 md:w-32 object-contain"
-        />
-      </div>
+      <img
+        src={logo}
+        alt="After Brakes"
+        className="h-32 md:h-40 w-auto object-contain mb-6 animate-fade-in drop-shadow-2xl"
+      />
       <h1 className="font-brand text-3xl md:text-4xl font-bold text-black animate-fade-in mb-2">
         After Brakes
       </h1>

@@ -19,7 +19,7 @@ const Navbar = ({ role, onLogout }: NavbarProps) => {
           className="flex items-center gap-3 cursor-pointer"
           onClick={() => navigate("/")}
         >
-          <img src={logo} alt="After Brakes" className="h-10 w-10 md:h-12 md:w-12 object-contain" />
+          <img src={logo} alt="After Brakes" className="h-10 md:h-12 w-auto object-contain" />
           <span className="font-brand text-xl md:text-2xl font-bold text-foreground hidden sm:inline">
             After Brakes
           </span>
