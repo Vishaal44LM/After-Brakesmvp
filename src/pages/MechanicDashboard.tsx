@@ -9,15 +9,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   MapPin, IndianRupee, MessageCircle, Loader2,
   Clock, Star, Edit2, Save, Camera, Store, User, Phone, Link, FileCheck,
-  Navigation, Wrench
+  Navigation, Wrench, CalendarClock, Sun, Sunset, Moon
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { chennaiAreas } from "@/data/chennaiAreas";
+import { greetingFor, firstName } from "@/lib/greeting";
 import { useBroadcastMechanicLocation } from "@/hooks/useBroadcastMechanicLocation";
 import MechanicRequestsHome from "@/components/MechanicRequestsHome";
+import ScheduledServices from "@/components/ScheduledServices";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import LocationPermissionGate from "@/components/LocationPermissionGate";
 import InAppBrowserGate from "@/components/InAppBrowserGate";
