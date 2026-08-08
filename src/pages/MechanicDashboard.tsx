@@ -164,9 +164,25 @@ const MechanicDashboard = () => {
       <PWAInstallPrompt />
       <Navbar role="mechanic" onLogout={handleLogout} />
       <div className="container max-w-2xl py-4 px-4">
+        {/* Personalized greeting */}
+        <div className="mb-4 flex items-center gap-3 animate-fade-in">
+          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+            <GreetIcon className="h-5 w-5 text-primary" />
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-lg font-semibold text-foreground truncate">
+              {greeting}, {firstName(mechanicProfile?.name)}
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              {isAvailable ? "You're online and receiving requests." : "You're offline — turn availability on to get requests."}
+            </p>
+          </div>
+        </div>
+
         <Tabs defaultValue="issues" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 bg-secondary">
+          <TabsList className="grid w-full grid-cols-3 bg-secondary">
             <TabsTrigger value="issues" className="text-xs gap-1.5"><Wrench className="h-3.5 w-3.5" /> Requests</TabsTrigger>
+            <TabsTrigger value="scheduled" className="text-xs gap-1.5"><CalendarClock className="h-3.5 w-3.5" /> Scheduled</TabsTrigger>
             <TabsTrigger value="profile" className="text-xs gap-1.5"><User className="h-3.5 w-3.5" /> Profile</TabsTrigger>
           </TabsList>
 
@@ -174,6 +190,12 @@ const MechanicDashboard = () => {
           <TabsContent value="issues" className="space-y-4 mt-4">
             <MechanicRequestsHome />
           </TabsContent>
+
+          {/* SCHEDULED SERVICES */}
+          <TabsContent value="scheduled" className="space-y-4 mt-4">
+            <ScheduledServices />
+          </TabsContent>
+
 
           {/* PROFILE */}
           <TabsContent value="profile" className="space-y-4 mt-4">
