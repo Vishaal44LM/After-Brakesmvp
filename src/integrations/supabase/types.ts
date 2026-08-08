@@ -61,48 +61,63 @@ export type Database = {
       }
       issues: {
         Row: {
-          ai_analysis: Json | null
           area: string | null
+          booking_status: string
+          completed_at: string | null
           created_at: string | null
           description: string | null
           id: string
           image_url: string | null
-          issue_type: string | null
+          is_scheduled: boolean
           latitude: number | null
           longitude: number | null
           pincode: string | null
+          scheduled_at: string | null
+          service_category: string | null
+          service_name: string | null
+          started_at: string | null
           status: string
           updated_at: string | null
           user_id: string
           vehicle_id: string | null
         }
         Insert: {
-          ai_analysis?: Json | null
           area?: string | null
+          booking_status?: string
+          completed_at?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
-          issue_type?: string | null
+          is_scheduled?: boolean
           latitude?: number | null
           longitude?: number | null
           pincode?: string | null
+          scheduled_at?: string | null
+          service_category?: string | null
+          service_name?: string | null
+          started_at?: string | null
           status?: string
           updated_at?: string | null
           user_id: string
           vehicle_id?: string | null
         }
         Update: {
-          ai_analysis?: Json | null
           area?: string | null
+          booking_status?: string
+          completed_at?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
-          issue_type?: string | null
+          is_scheduled?: boolean
           latitude?: number | null
           longitude?: number | null
           pincode?: string | null
+          scheduled_at?: string | null
+          service_category?: string | null
+          service_name?: string | null
+          started_at?: string | null
           status?: string
           updated_at?: string | null
           user_id?: string

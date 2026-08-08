@@ -8,11 +8,11 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, MapPin, Send, AlertTriangle, Search, X } from "lucide-react";
+import { Loader2, MapPin, Send, AlertTriangle, Search, X, CalendarClock, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { ISSUE_TYPES } from "@/data/issueTypes";
+import { SERVICE_CATEGORIES } from "@/data/services";
 import AddressSearch from "@/components/AddressSearch";
 
 const nativeSelectClass =
@@ -123,7 +123,11 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue, topMapOve
   const [mechanics, setMechanics] = useState<any[]>([]);
   const [loadingMechs, setLoadingMechs] = useState(true);
 
-  const [issueType, setIssueType] = useState("");
+  const [serviceCategory, setServiceCategory] = useState("");
+  const [serviceName, setServiceName] = useState("");
+  const [bookingMode, setBookingMode] = useState<"now" | "later">("now");
+  const [scheduleDate, setScheduleDate] = useState("");
+  const [scheduleTime, setScheduleTime] = useState("");
   const [description, setDescription] = useState("");
   const [vehicleId, setVehicleId] = useState("");
   const [requesting, setRequesting] = useState(false);
@@ -227,6 +231,7 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue, topMapOve
         .select("id, status, created_at")
         .eq("user_id", user.id)
         .eq("status", "open")
+        .eq("is_scheduled", false)
         .gte("created_at", cutoff)
         .order("created_at", { ascending: false })
         .limit(5);
@@ -299,9 +304,23 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue, topMapOve
 
   const handleRequest = async () => {
     if (!user) { toast.error("Please log in"); return; }
-    if (!issueType) { toast.error("Select what's wrong"); return; }
+    if (!serviceCategory) { toast.error("Choose a service category"); return; }
+    if (!serviceName) { toast.error("Choose the service you need"); return; }
     if (vehicles.length > 0 && !vehicleId) { toast.error("Please select your vehicle"); return; }
     if (!description.trim()) { toast.error("Please add details about the problem"); return; }
+
+    let scheduledAt: string | null = null;
+    if (bookingMode === "later") {
+      if (!scheduleDate || !scheduleTime) { toast.error("Pick a date and time for your booking"); return; }
+      const dt = new Date(`${scheduleDate}T${scheduleTime}`);
+      if (isNaN(dt.getTime())) { toast.error("Invalid date or time"); return; }
+      if (dt.getTime() < Date.now() + 15 * 60 * 1000) {
+        toast.error("Please schedule at least 15 minutes from now");
+        return;
+      }
+      scheduledAt = dt.toISOString();
+    }
+
     const finalPos = pickedPos || gpsPos;
     if (!finalPos) { toast.error("Set your location — move the map or enable GPS"); return; }
 
@@ -315,7 +334,11 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue, topMapOve
             description,
             address ? `Address: ${address}` : null,
           ].filter(Boolean).join("\n\n"),
-          issue_type: issueType,
+          service_category: serviceCategory,
+          service_name: serviceName,
+          is_scheduled: bookingMode === "later",
+          scheduled_at: scheduledAt,
+          booking_status: "waiting",
           vehicle_id: vehicleId || null,
           area: profile?.area || null,
           latitude: finalPos[0],
@@ -326,10 +349,17 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue, topMapOve
         .single();
       if (error) throw error;
 
-      toast.success("Request sent — looking for a mechanic…");
-      setActiveIssueId(issue.id);
+      if (bookingMode === "later") {
+        toast.success("Booking scheduled — check Scheduled Bookings for updates");
+        setScheduleDate("");
+        setScheduleTime("");
+      } else {
+        toast.success("Request sent — looking for a mechanic…");
+        setActiveIssueId(issue.id);
+      }
       setDescription("");
-      setIssueType("");
+      setServiceCategory("");
+      setServiceName("");
     } catch (e: any) {
       toast.error(e.message || "Failed to send request");
     } finally {
@@ -433,22 +463,84 @@ export default function RequestMechanicHome({ vehicles, onActiveIssue, topMapOve
             )}
 
             <Button className="w-full" size="lg" onClick={handleRequest} disabled={requesting || !!activeIssueId}>
-              {requesting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-              Request a Mechanic
+              {requesting ? <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                : bookingMode === "later" ? <CalendarClock className="h-4 w-4 mr-2" />
+                : <Send className="h-4 w-4 mr-2" />}
+              {bookingMode === "later" ? "Confirm Booking" : "Request a Mechanic"}
             </Button>
 
             <div className="space-y-2 pt-1">
-              <label className="text-xs font-medium text-muted-foreground">What's the problem?</label>
+              {/* Book now / later */}
+              <div className="grid grid-cols-2 gap-2 p-1 rounded-lg bg-secondary">
+                <button
+                  type="button"
+                  onClick={() => setBookingMode("now")}
+                  className={`flex items-center justify-center gap-1.5 rounded-md py-2 text-xs font-medium transition-colors ${
+                    bookingMode === "now" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  <Zap className="h-3.5 w-3.5" /> Book Now
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBookingMode("later")}
+                  className={`flex items-center justify-center gap-1.5 rounded-md py-2 text-xs font-medium transition-colors ${
+                    bookingMode === "later" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  <CalendarClock className="h-3.5 w-3.5" /> Schedule for Later
+                </button>
+              </div>
+
+              {bookingMode === "later" && (
+                <div className="grid grid-cols-2 gap-2 animate-fade-in">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Date</label>
+                    <input
+                      type="date"
+                      value={scheduleDate}
+                      min={new Date().toISOString().slice(0, 10)}
+                      onChange={(e) => setScheduleDate(e.target.value)}
+                      className="w-full h-10 px-3 rounded-md bg-secondary border-0 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Time</label>
+                    <input
+                      type="time"
+                      value={scheduleTime}
+                      onChange={(e) => setScheduleTime(e.target.value)}
+                      className="w-full h-10 px-3 rounded-md bg-secondary border-0 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <label className="text-xs font-medium text-muted-foreground">Service category</label>
               <select
-                value={issueType}
-                onChange={(e) => setIssueType(e.target.value)}
+                value={serviceCategory}
+                onChange={(e) => { setServiceCategory(e.target.value); setServiceName(""); }}
                 className={nativeSelectClass}
               >
-                <option value="">Select issue type</option>
-                {ISSUE_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
+                <option value="">Select a category</option>
+                {SERVICE_CATEGORIES.map((c) => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
                 ))}
               </select>
+
+              <label className="text-xs font-medium text-muted-foreground">Select service</label>
+              <select
+                value={serviceName}
+                onChange={(e) => setServiceName(e.target.value)}
+                disabled={!serviceCategory}
+                className={`${nativeSelectClass} disabled:opacity-50`}
+              >
+                <option value="">{serviceCategory ? "Select a service" : "Choose a category first"}</option>
+                {SERVICE_CATEGORIES.find((c) => c.value === serviceCategory)?.services.map((s) => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+
               {vehicles.length > 0 && (
                 <>
                   <label className="text-xs font-medium text-muted-foreground">Vehicle</label>
