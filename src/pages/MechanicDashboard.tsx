@@ -157,6 +157,9 @@ const MechanicDashboard = () => {
 
   const handleLogout = async () => { await signOut(); navigate("/"); };
 
+  const greeting = greetingFor();
+  const GreetIcon = greeting === "Good Morning" ? Sun : greeting === "Good Afternoon" ? Sunset : Moon;
+
   return (
     <div className="min-h-screen bg-background">
       <InAppBrowserGate />
