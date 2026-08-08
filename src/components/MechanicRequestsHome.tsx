@@ -12,7 +12,7 @@ import { Loader2, MapPin, Check, X, MessageCircle, Phone, Navigation, Car, Alert
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { issueTypeLabel } from "@/data/issueTypes";
+import { serviceLabel } from "@/data/services";
 import RequestMiniMap, { distanceMeters } from "@/components/RequestMiniMap";
 import LiveCustomerTracker from "@/components/LiveCustomerTracker";
 
@@ -49,7 +49,7 @@ type Job = {
   userName?: string;
   userPhone?: string;
   description: string;
-  issue_type?: string | null;
+  service_name?: string | null;
   area?: string | null;
   latitude?: number | null;
   longitude?: number | null;
@@ -85,11 +85,12 @@ export default function MechanicRequestsHome() {
     if (!user) return;
     setLoading(true);
     try {
-      // 1. Open issues
+      // 1. Open instant issues (scheduled bookings live in the Scheduled tab)
       const { data: openIssues } = await supabase
         .from("issues")
         .select("*")
         .eq("status", "open")
+        .eq("is_scheduled", false)
         .order("created_at", { ascending: false })
         .limit(50);
 
@@ -114,7 +115,9 @@ export default function MechanicRequestsHome() {
         ...openClean,
         ...((acceptedIssues || []).filter((i: any) => {
           const r = respByIssue.get(i.id);
-          return r && r.status === "accepted";
+          if (!r || r.status !== "accepted") return false;
+          // Scheduled bookings only become a live tracked job once started.
+          return !i.is_scheduled || i.booking_status === "in_progress";
         })),
       ];
 
@@ -143,7 +146,7 @@ export default function MechanicRequestsHome() {
           userName: profile?.name,
           userPhone: isAccepted ? profile?.phone : undefined,
           description: i.description || "",
-          issue_type: i.issue_type,
+          service_name: i.service_name,
           area: i.area,
           latitude: i.latitude,
           longitude: i.longitude,
@@ -285,7 +288,7 @@ export default function MechanicRequestsHome() {
                   .map(({ j }) => (
                     <Marker key={j.issueId} position={[j.latitude!, j.longitude!]} icon={userIcon}>
                       <Popup>
-                        <strong>{issueTypeLabel(j.issue_type)}</strong>
+                        <strong>{serviceLabel(j.service_name)}</strong>
                         <br />
                         {j.userName || "Customer"} · {j.area}
                       </Popup>
@@ -325,7 +328,7 @@ export default function MechanicRequestsHome() {
           <div key={j.issueId} className="bg-card rounded-xl border border-border p-4 animate-slide-up space-y-3">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-xs uppercase tracking-wide text-primary font-semibold">{issueTypeLabel(j.issue_type)}</p>
+                <p className="text-xs uppercase tracking-wide text-primary font-semibold">{serviceLabel(j.service_name)}</p>
                 <h3 className="font-semibold text-sm truncate">{j.userName || "Customer"}</h3>
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <MapPin className="h-3 w-3" /> {j.area || "Unknown area"}
@@ -417,7 +420,7 @@ function ActiveJobCard({
     <div className="bg-card rounded-xl border border-success/40 p-4 animate-slide-up space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-xs uppercase tracking-wide text-success font-semibold">{issueTypeLabel(job.issue_type)}</p>
+          <p className="text-xs uppercase tracking-wide text-success font-semibold">{serviceLabel(job.service_name)}</p>
           <h3 className="font-semibold text-sm truncate">{job.userName || "Customer"}</h3>
           <p className="text-xs text-muted-foreground flex items-center gap-1">
             <MapPin className="h-3 w-3" /> {job.area || "Unknown area"}
