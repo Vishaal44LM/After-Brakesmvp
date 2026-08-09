@@ -204,7 +204,6 @@ const UserDashboard = () => {
             <h1 className="text-lg font-semibold text-foreground truncate">
               {greeting}, {firstName(profile?.name)}
             </h1>
-            <p className="text-xs text-muted-foreground">Mechanics in Minutes.</p>
           </div>
         </div>
 
