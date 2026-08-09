@@ -18,7 +18,7 @@ import LiveCustomerTracker from "@/components/LiveCustomerTracker";
 
 const mechIcon = L.divIcon({
   className: "",
-  html: `<div style="width:20px;height:20px;border-radius:50%;background:hsl(1 93% 51%);border:3px solid white;box-shadow:0 0 0 3px hsla(1,93%,51%,0.35);"></div>`,
+  html: `<div style="width:20px;height:20px;border-radius:50%;background:hsl(224 75% 52%);border:3px solid white;box-shadow:0 0 0 3px hsla(224,75%,52%,0.35);"></div>`,
   iconSize: [20, 20], iconAnchor: [10, 10],
 });
 const userIcon = L.divIcon({
