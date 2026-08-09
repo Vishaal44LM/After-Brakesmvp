@@ -25,7 +25,7 @@ const Preloader = ({ onComplete }: { onComplete: () => void }) => {
       className={`fixed inset-0 z-50 flex flex-col items-center justify-center transition-opacity duration-500 ${
         fadeOut ? "opacity-0" : "opacity-100"
       }`}
-      style={{ backgroundColor: "#F60F0C" }}
+      style={{ backgroundColor: "#2B5CE0" }}
     >
       <img
         src={logo}
