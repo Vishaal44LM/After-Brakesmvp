@@ -7,6 +7,8 @@
 @layer base {
   :root {
     --background: 0 0% 6%;
+    --brand-holding-background: #2B5CE0;
+    --brand-holding-foreground: #000000;
     --foreground: 0 0% 100%;
 
     --card: 0 0% 11%;
@@ -63,6 +65,11 @@
 }
 
 @layer utilities {
+  .brand-holding-screen {
+    background-color: var(--brand-holding-background);
+    color: var(--brand-holding-foreground);
+  }
+
   .font-brand {
     font-family: 'Tillana', cursive;
   }
