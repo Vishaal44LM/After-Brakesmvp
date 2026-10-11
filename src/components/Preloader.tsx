@@ -1,25 +1,15 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import logo from "@/assets/logo-transparent.png";
 
+// In holding mode this stays on screen indefinitely (Index passes a no-op
+// onComplete). When the full app reopens, restore the fade-out timers here.
 const Preloader = ({ onComplete }: { onComplete: () => void }) => {
-  const [fadeOut, setFadeOut] = useState(false);
-
   useEffect(() => {
-    const fadeTimer = window.setTimeout(() => setFadeOut(true), 2200);
-    const completeTimer = window.setTimeout(onComplete, 2700);
-
-    return () => {
-      window.clearTimeout(fadeTimer);
-      window.clearTimeout(completeTimer);
-    };
+    if (onComplete) return;
   }, [onComplete]);
 
   return (
-    <div
-      className={`brand-holding-screen fixed inset-0 z-50 flex flex-col items-center justify-center transition-opacity duration-500 ${
-        fadeOut ? "opacity-0" : "opacity-100"
-      }`}
-    >
+    <div className="brand-holding-screen fixed inset-0 z-50 flex flex-col items-center justify-center">
       <img
         src={logo}
         alt="After Brakes"
